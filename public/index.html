@@ -127,6 +127,64 @@ body{
 .refresh-btn:hover{ background: rgba(251,247,239,0.18); }
 .refresh-btn:disabled{ opacity:0.5; cursor:default; }
 
+.filter-bar{
+  display:flex;
+  align-items:flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0 14px 0;
+  border-top: 1px solid rgba(251,247,239,0.10);
+  margin-top: 4px;
+}
+.filter-field{
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.filter-field span{
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(251,247,239,0.55);
+}
+.filter-field input[type="date"]{
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cream);
+  background: rgba(251,247,239,0.08);
+  border: 1px solid rgba(251,247,239,0.25);
+  border-radius: 5px;
+  padding: 6px 8px;
+  color-scheme: dark;
+}
+.filter-btn{
+  background: var(--red);
+  border: 1px solid var(--red);
+  color: var(--cream);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.filter-btn:hover{ background: var(--red-deep); border-color: var(--red-deep); }
+.filter-btn.ghost{
+  background: transparent;
+  border: 1px solid rgba(251,247,239,0.25);
+  color: rgba(251,247,239,0.75);
+}
+.filter-btn.ghost:hover{ background: rgba(251,247,239,0.10); }
+.filter-status{
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(251,247,239,0.6);
+  align-self: center;
+}
+
 .tabs{
   display:flex;
   gap: 2px;
@@ -420,6 +478,19 @@ footer{
     <button class="tab-btn" data-tab="clientes"><span class="tab-num">03</span>Clientes</button>
     <button class="tab-btn" data-tab="caja"><span class="tab-num">04</span>Caja &amp; gastos</button>
     <button class="tab-btn" data-tab="rentabilidad"><span class="tab-num">05</span>Rentabilidad</button>
+  </div>
+  <div class="filter-bar">
+    <label class="filter-field">
+      <span>Desde</span>
+      <input type="date" id="filtro-desde">
+    </label>
+    <label class="filter-field">
+      <span>Hasta</span>
+      <input type="date" id="filtro-hasta">
+    </label>
+    <button class="filter-btn" id="filtro-aplicar">Aplicar</button>
+    <button class="filter-btn ghost" id="filtro-limpiar">Ver todo</button>
+    <span class="filter-status" id="filtro-status"></span>
   </div>
 </div>
 
@@ -835,9 +906,9 @@ function categorizeExpense(notes){
   return 'Sin clasificar';
 }
 
-/* ---------------- build DATA from SQL ---------------- */
+/* ---------------- raw query (una vez por descarga de la base) ---------------- */
 
-function buildData(){
+function queryRaw(){
   const lines = q(`
     SELECT o.id AS order_id, o.created AS created, o.customerId AS customer_id,
            c.name AS customer_name, p.name AS product_name,
@@ -855,6 +926,24 @@ function buildData(){
     l.units = (l.quantity || 0) * boxUnits(l.product_name);
   });
 
+  const wallet = q(`SELECT created, entityType, amount, notes FROM wallet_transactions`);
+  wallet.forEach(w=>{ w.month = monthOf(w.created); });
+
+  return { lines, wallet };
+}
+
+// fromMs/toMs son límites inclusivos en epoch-ms, o null para "sin límite".
+function filterByDate(rawLines, rawWallet, fromMs, toMs){
+  const inRange = ts => (fromMs===null || ts>=fromMs) && (toMs===null || ts<=toMs);
+  return {
+    lines: rawLines.filter(l=>inRange(l.created)),
+    wallet: rawWallet.filter(w=>inRange(w.created))
+  };
+}
+
+/* ---------------- build DATA (se recalcula al cambiar el filtro) ---------------- */
+
+function buildData(lines, wallet){
   const meses = [...new Set(lines.map(l=>l.month))].sort();
   const now = Date.now();
   const currentYear = new Date(now).getUTCFullYear();
@@ -996,8 +1085,6 @@ function buildData(){
   const kpi_pct_1pedido = clientes_totales ? +(100*con1pedido/clientes_totales).toFixed(1) : 0;
 
   // ---- caja ----
-  const wallet = q(`SELECT created, entityType, amount, notes FROM wallet_transactions`);
-  wallet.forEach(w=>{ w.month = monthOf(w.created); });
   const meses_caja = [...new Set(wallet.map(w=>w.month))].sort();
   const caja_orden = [], caja_pago = [], caja_interno = [], caja_neto = [];
   meses_caja.forEach(mes=>{
@@ -1022,8 +1109,8 @@ function buildData(){
   const gastos_labels = Object.keys(gastosAgg).sort((a,b)=>gastosAgg[b]-gastosAgg[a]);
   const gastos_monto = gastos_labels.map(k=>Math.round(gastosAgg[k]));
 
-  // ---- rentabilidad (año actual, canal regular) ----
-  const rentLines = lines.filter(l => new Date(l.created).getUTCFullYear() === currentYear && !isEventoProd(l.product_name) && !isAdjustmentProd(l.product_name));
+  // ---- rentabilidad (todo el rango filtrado, canal regular) ----
+  const rentLines = lines.filter(l => !isEventoProd(l.product_name) && !isAdjustmentProd(l.product_name));
   const rentAgg = {};
   rentLines.forEach(l=>{
     const key = l.product_name;
@@ -1089,6 +1176,8 @@ function buildData(){
 }
 
 let DATA = null;
+let RAW = null;          // { lines, wallet } sin filtrar, tal cual vino de la base
+let dbSource = null;     // 'dropbox-live' | 'cached-fallback', para el indicador de estado
 
 /* ---------------- chart plugins (unchanged) ---------------- */
 
@@ -1653,11 +1742,11 @@ function initRentabilidad(){
   ['rentProd','rentRanking','rentEvol'].forEach(destroy);
   clearTable('#tabla-rentabilidad');
 
-  document.getElementById('rent-sub').textContent = 'Foco ' + DATA.currentYear + ' · Ventas nominales vs. costo estimado (ver COSTS_PER_BOX en el código)';
+  document.getElementById('rent-sub').textContent = 'Período filtrado · Ventas nominales vs. costo estimado (ver COSTS_PER_BOX en el código)';
 
   try{
     document.getElementById('kpi-rent-ventas').textContent = fmtARSk(DATA.rent_kpi_ventas);
-    document.getElementById('kpi-rent-lineas').textContent = DATA.rent_kpi_lineas + ' líneas pagadas · ' + DATA.currentYear;
+    document.getElementById('kpi-rent-lineas').textContent = DATA.rent_kpi_lineas + ' líneas pagadas en el período';
     document.getElementById('kpi-rent-costo').textContent = fmtARSk(DATA.rent_kpi_costo);
     document.getElementById('kpi-rent-utilidad').textContent = fmtARSk(DATA.rent_kpi_utilidad);
     document.getElementById('kpi-rent-margen').textContent = DATA.rent_kpi_margen + '%';
@@ -1770,16 +1859,71 @@ function setLiveStatus(state, label){
   lbl.textContent = label;
 }
 
+/* ---------------- filtro de fecha ---------------- */
+
+function dateInputToMs(value, endOfDay){
+  if(!value) return null;
+  const [y,m,d] = value.split('-').map(Number);
+  return endOfDay
+    ? Date.UTC(y, m-1, d, 23, 59, 59, 999)
+    : Date.UTC(y, m-1, d, 0, 0, 0, 0);
+}
+function msToDateInput(ms){
+  const d = new Date(ms);
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+}
+
+function applyFilterAndRender(){
+  if(!RAW) return;
+  const desdeEl = document.getElementById('filtro-desde');
+  const hastaEl = document.getElementById('filtro-hasta');
+  const fromMs = dateInputToMs(desdeEl.value, false);
+  const toMs = dateInputToMs(hastaEl.value, true);
+
+  const { lines, wallet } = filterByDate(RAW.lines, RAW.wallet, fromMs, toMs);
+  DATA = buildData(lines, wallet);
+  fillKPIs();
+  renderAll();
+
+  const status = document.getElementById('filtro-status');
+  if(!fromMs && !toMs){
+    status.textContent = 'Mostrando todo el historial';
+  } else {
+    status.textContent = DATA.kpi_total_pedidos + ' pedidos en el rango seleccionado';
+  }
+}
+
+function setupFilterBounds(){
+  if(!RAW || !RAW.lines.length) return;
+  const times = RAW.lines.map(l=>l.created);
+  const min = msToDateInput(Math.min(...times));
+  const max = msToDateInput(Math.max(...times));
+  const desdeEl = document.getElementById('filtro-desde');
+  const hastaEl = document.getElementById('filtro-hasta');
+  desdeEl.min = min; desdeEl.max = max;
+  hastaEl.min = min; hastaEl.max = max;
+}
+
+/* ---------------- boot / refresh ---------------- */
+
+function setLiveStatus(state, label){
+  const dot = document.getElementById('live-dot');
+  const lbl = document.getElementById('live-label');
+  dot.className = 'live-dot' + (state==='err' ? ' err' : state==='stale' ? ' stale' : '');
+  lbl.textContent = label;
+}
+
 async function refresh(showFullLoader){
   const btn = document.getElementById('refresh-btn');
   btn.disabled = true;
   if(showFullLoader) document.getElementById('loading-screen').classList.remove('hidden');
   try{
     const { source, dbErr } = await loadDatabase();
+    dbSource = source;
     setLoading('Calculando métricas…');
-    DATA = buildData();
-    fillKPIs();
-    renderAll();
+    RAW = queryRaw();
+    setupFilterBounds();
+    applyFilterAndRender(); // respeta el filtro de fecha que el usuario ya haya elegido
     const now = new Date();
     const hora = now.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
     if(source === 'dropbox-live'){
@@ -1811,6 +1955,12 @@ function boot(){
     btn.addEventListener('click', function(){ activateTab(btn.dataset.tab); });
   });
   document.getElementById('refresh-btn').addEventListener('click', function(){ refresh(false); });
+  document.getElementById('filtro-aplicar').addEventListener('click', applyFilterAndRender);
+  document.getElementById('filtro-limpiar').addEventListener('click', function(){
+    document.getElementById('filtro-desde').value = '';
+    document.getElementById('filtro-hasta').value = '';
+    applyFilterAndRender();
+  });
   activateTab('resumen');
   refresh(true);
   setInterval(function(){ refresh(false); }, REFRESH_MS);
