@@ -295,6 +295,17 @@ main{
 
 .kpi-value.small{ font-size: 1.5rem; }
 
+.kpi-value-row{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.delta-badge{
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.01em;
+}
+.delta-badge.up{ background: rgba(110,127,74,0.15); color: var(--olive); }
+.delta-badge.down{ background: rgba(203,20,38,0.10); color: var(--red); }
+
 .kpi-foot{
   font-size: 0.76rem;
   font-weight: 500;
@@ -505,7 +516,10 @@ footer{
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">Ventas totales (facturado)</div>
-        <div class="kpi-value" id="kpi-ventas">-</div>
+        <div class="kpi-value-row">
+          <div class="kpi-value" id="kpi-ventas">-</div>
+          <span class="delta-badge" id="kpi-ventas-delta"></span>
+        </div>
         <div class="kpi-foot" id="kpi-ventas-foot">Facturado (pagado + impago), excluye cancelados</div>
       </div>
       <div class="kpi-card">
@@ -571,6 +585,12 @@ footer{
         <div class="card-caption">Precio unitario promedio nominal, por trimestre</div>
         <div class="chart-wrap h-320"><canvas id="chart-ventas-precio"></canvas><div class="chart-error"></div></div>
       </div>
+    </div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Crecimiento mes a mes</div>
+      <div class="card-caption">Variación % de ventas totales (regular + eventos) vs. el mes anterior</div>
+      <div class="chart-wrap h-280"><canvas id="chart-ventas-crecimiento"></canvas><div class="chart-error"></div></div>
     </div>
   </section>
 
@@ -645,12 +665,29 @@ footer{
       <div class="card-caption">Todas las líneas facturadas, incluye eventos · vista mensual complementaria</div>
       <div class="chart-wrap h-360"><canvas id="chart-prod-mes"></canvas><div class="chart-error"></div></div>
     </div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Qué se movió más — último mes vs. anterior</div>
+      <div class="card-caption" id="movers-caption">Cajas vendidas, mayor variación absoluta primero</div>
+      <div class="scroll-table">
+      <table id="tabla-movers">
+        <thead><tr><th>Producto</th><th class="num">Mes anterior</th><th class="num">Último mes</th><th class="num">Variación</th><th class="num">%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
   </section>
 
   <!-- ============ CLIENTES ============ -->
   <section class="panel" id="panel-clientes">
     <div class="section-title">Clientes / comercios</div>
     <div class="section-sub">Concentración, actividad y rotación de la cartera</div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Segmentación por actividad</div>
+      <div class="card-caption">Nuevo: 1ª compra en los últimos 30 días · Activo: compró en los últimos 30 días (recurrente) · En riesgo: 31–60 días sin comprar · Inactivo: más de 60 días</div>
+      <div class="chart-wrap h-280"><canvas id="chart-cli-segmentos"></canvas><div class="chart-error"></div></div>
+    </div>
 
     <div class="grid-1 card">
       <div class="card-title">Top 15 clientes — participación individual y acumulada</div>
@@ -767,6 +804,17 @@ footer{
       <div class="card-title">Evolución mensual de utilidad y margen</div>
       <div class="card-caption">Utilidad (barra) vs. margen % (línea) — año actual</div>
       <div class="chart-wrap h-360"><canvas id="chart-rent-evol"></canvas><div class="chart-error"></div></div>
+    </div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Margen por cliente — top 10</div>
+      <div class="card-caption">Mismo criterio de costo estimado (COSTS_PER_BOX), agregado por comercio</div>
+      <div class="scroll-table">
+      <table id="tabla-rent-cliente">
+        <thead><tr><th>Cliente</th><th class="num">Ventas</th><th class="num">Costo</th><th class="num">Utilidad</th><th class="num">Margen %</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
     </div>
   </section>
 
@@ -963,6 +1011,15 @@ function buildData(lines, wallet){
     ticket_promedio.push(orders.size ? Math.round(total/orders.size) : 0);
   });
 
+  // ---- crecimiento mes a mes (% sobre monto total, regular+eventos) ----
+  const mom_growth = meses.map((mes, i) => {
+    if(i === 0) return null;
+    const prev = ventas_regular[i-1] + ventas_eventos[i-1];
+    const curr = ventas_regular[i] + ventas_eventos[i];
+    if(!prev) return null;
+    return +(100*(curr-prev)/prev).toFixed(1);
+  });
+
   // ---- productos (canal regular, top 5) ----
   const prodAgg = {};
   lines.forEach(l=>{
@@ -993,6 +1050,23 @@ function buildData(lines, wallet){
   const sumLineas = hist_prod_lineas.reduce((a,b)=>a+b,0);
   const prom_cajas_general = sumLineas ? +(sumCajas/sumLineas).toFixed(2) : 0;
   const prom_unid_general = sumLineas ? +(sumUnid/sumLineas).toFixed(2) : 0;
+
+  // ---- top movers: producto vs. mes anterior (cajas) ----
+  let product_movers = [];
+  if(meses.length >= 2){
+    const mLast = meses[meses.length-1], mPrev = meses[meses.length-2];
+    const cajasEnMes = (mes, prod) => lines.filter(l=>l.month===mes && l.product_name===prod).reduce((a,l)=>a+l.quantity,0);
+    product_movers = hist_prod_labels.map(prod=>{
+      const actual = cajasEnMes(mLast, prod);
+      const anterior = cajasEnMes(mPrev, prod);
+      const delta = actual - anterior;
+      const pct = anterior ? +(100*delta/anterior).toFixed(1) : (actual ? 100 : 0);
+      return { producto: prod, actual, anterior, delta, pct };
+    }).filter(m => m.actual>0 || m.anterior>0)
+      .sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta))
+      .slice(0,8);
+    product_movers._meses = [mPrev, mLast];
+  }
 
   // ---- precio por formato, por trimestre ----
   const trimestres = [...new Set(lines.map(l=>l.quarter))].sort();
@@ -1065,6 +1139,33 @@ function buildData(lines, wallet){
   const dormidos_count = dormidosArr.length;
   const dormidos_total = clientes_totales;
   const dormidos_lista = dormidosArr.map(({cliente, ultima_compra})=>({cliente, ultima_compra}));
+
+  // ---- segmentación de clientes (Nuevo / Activo / En riesgo / Inactivo) ----
+  // Recencia calculada contra la fecha más reciente disponible en el rango filtrado
+  // (no siempre "hoy"), así el segmento tiene sentido aunque estés mirando un período pasado.
+  const refDate = lines.length ? Math.max(...lines.map(l=>l.created)) : now;
+  const freqPerCliente = {};
+  lines.forEach(l=>{
+    const key = l.customer_name || '(sin nombre)';
+    (freqPerCliente[key] = freqPerCliente[key] || new Set()).add(l.order_id);
+  });
+  const segmentos = { Nuevo: [], Activo: [], 'En riesgo': [], Inactivo: [] };
+  Object.keys(lastPurchase).forEach(cliente=>{
+    const recenciaDias = Math.floor((refDate - lastPurchase[cliente]) / (24*60*60*1000));
+    const freq = freqPerCliente[cliente] ? freqPerCliente[cliente].size : 0;
+    let seg;
+    if(recenciaDias <= 30 && freq === 1) seg = 'Nuevo';
+    else if(recenciaDias <= 30) seg = 'Activo';
+    else if(recenciaDias <= 60) seg = 'En riesgo';
+    else seg = 'Inactivo';
+    segmentos[seg].push({ cliente, monto: Math.round(cliAgg[cliente]||0), recenciaDias, freq });
+  });
+  const cliente_segmentos = Object.entries(segmentos).map(([nombre, arr])=>({
+    nombre,
+    count: arr.length,
+    monto: Math.round(arr.reduce((a,c)=>a+c.monto,0)),
+    clientes: arr.sort((a,b)=>b.monto-a.monto)
+  }));
 
   // ---- KPIs resumen ----
   const kpi_ventas_totales = Math.round(lines.reduce((a,l)=>a+l.monto,0));
@@ -1153,23 +1254,41 @@ function buildData(lines, wallet){
   const rent_kpi_margen = rent_kpi_ventas ? +(100*rent_kpi_utilidad/rent_kpi_ventas).toFixed(1) : 0;
   const rent_kpi_lineas = rentLines.length;
 
+  // ---- margen por cliente (top 10) ----
+  const rentCliAgg = {};
+  rentLines.forEach(l=>{
+    const key = l.customer_name || '(sin nombre)';
+    if(!rentCliAgg[key]) rentCliAgg[key] = { ventas:0, costo:0 };
+    const costPerBox = COSTS_PER_BOX[l.product_name] || 0;
+    rentCliAgg[key].ventas += l.monto;
+    rentCliAgg[key].costo += costPerBox * l.quantity;
+  });
+  const rent_cliente_labels = Object.keys(rentCliAgg).sort((a,b)=>rentCliAgg[b].ventas-rentCliAgg[a].ventas).slice(0,10);
+  const rent_cliente = rent_cliente_labels.map(k=>{
+    const ventas = Math.round(rentCliAgg[k].ventas);
+    const costo = Math.round(rentCliAgg[k].costo);
+    const utilidad = ventas - costo;
+    return { cliente: k, ventas, costo, utilidad, margen: ventas ? +(100*utilidad/ventas).toFixed(1) : 0 };
+  });
+
+
   return {
-    meses, ventas_regular, ventas_eventos, clientes_activos, pedidos_count, ticket_promedio,
+    meses, ventas_regular, ventas_eventos, clientes_activos, pedidos_count, ticket_promedio, mom_growth,
     productos_labels, productos_monto, productos_unid,
     productos_all_labels, productos_all_monto,
     trimestres, precio_x3, precio_x6, precio_x12,
     clientes_labels, clientes_monto, clientes_pct, clientes_pct_acum, clientes_totales, clientes_para_80pct,
-    dormidos_count, dormidos_total, dormidos_lista,
+    dormidos_count, dormidos_total, dormidos_lista, cliente_segmentos,
     meses_caja, caja_orden, caja_pago, caja_interno, caja_neto,
     gastos_labels, gastos_monto,
     kpi_ventas_totales, kpi_ventas_pendientes, kpi_ticket_promedio, kpi_ticket_mediana, kpi_total_clientes, kpi_total_pedidos,
     kpi_total_egresos, kpi_cobros_orden, kpi_pct_1pedido,
     hist_prod_labels, hist_prod_cajas, hist_prod_unidades, hist_prod_prom_cajas, hist_prod_prom_unid,
-    hist_prod_lineas, prom_cajas_general, prom_unid_general,
+    hist_prod_lineas, prom_cajas_general, prom_unid_general, product_movers,
     trim_evol_labels: trimestres, trim_evol_cajas, trim_evol_unidades, trim_prom_cajas, trim_prom_unidades,
     cajas_por_producto_mes,
     rent_prod_labels, rent_prod_ventas, rent_prod_costo, rent_prod_utilidad, rent_prod_margen,
-    rent_rank_labels, rent_rank_margen, rent_rank_utilidad,
+    rent_rank_labels, rent_rank_margen, rent_rank_utilidad, rent_cliente,
     rent_meses, rent_mes_ventas, rent_mes_costo, rent_mes_utilidad, rent_mes_margen,
     rent_kpi_ventas, rent_kpi_costo, rent_kpi_utilidad, rent_kpi_margen, rent_kpi_lineas,
     currentYear, totalClientesConNombre: clientes_totales
@@ -1289,6 +1408,14 @@ function resetCanvas(id){
 // ---------------- KPIs ----------------
 function fillKPIs(){
   document.getElementById('kpi-ventas').textContent = fmtARSk(DATA.kpi_ventas_totales);
+  const badge = document.getElementById('kpi-ventas-delta');
+  const lastGrowth = DATA.mom_growth.length ? DATA.mom_growth[DATA.mom_growth.length-1] : null;
+  if(lastGrowth === null){
+    badge.textContent = ''; badge.className = 'delta-badge';
+  } else {
+    badge.textContent = (lastGrowth>=0?'▲ +':'▼ ') + lastGrowth + '%';
+    badge.className = 'delta-badge ' + (lastGrowth>=0?'up':'down');
+  }
   const pctPend = DATA.kpi_ventas_totales ? Math.round(100*DATA.kpi_ventas_pendientes/DATA.kpi_ventas_totales) : 0;
   document.getElementById('kpi-ventas-foot').textContent = 'Facturado (pagado + impago) · ' + fmtARSk(DATA.kpi_ventas_pendientes) + ' sin cobrar (' + pctPend + '%)';
   document.getElementById('kpi-ticket').textContent = fmtARSk(DATA.kpi_ticket_promedio);
@@ -1363,8 +1490,8 @@ function initResumen(){
 }
 
 function initVentas(){
-  ['chart-ventas-evol','chart-ventas-ticket','chart-ventas-precio'].forEach(resetCanvas);
-  ['ventasEvol','ventasTicket','ventasPrecio'].forEach(destroy);
+  ['chart-ventas-evol','chart-ventas-ticket','chart-ventas-precio','chart-ventas-crecimiento'].forEach(resetCanvas);
+  ['ventasEvol','ventasTicket','ventasPrecio','ventasCrecimiento'].forEach(destroy);
 
   try{
     charts.ventasEvol = barLineVentas('chart-ventas-evol', DATA.meses, DATA.ventas_regular, DATA.ventas_eventos);
@@ -1414,12 +1541,33 @@ function initVentas(){
       }
     });
   }catch(e){ showError('chart-ventas-precio', e.message); }
+
+  try{
+    const growthColors = DATA.mom_growth.map(v => v===null ? PALETTE.line : v>=0 ? PALETTE.olive : PALETTE.red);
+    charts.ventasCrecimiento = new Chart(document.getElementById('chart-ventas-crecimiento'), {
+      type:'bar',
+      data:{
+        labels: DATA.meses.map(fmtMes),
+        datasets:[{ label:'Crecimiento %', data: DATA.mom_growth, backgroundColor: growthColors, borderRadius:3, maxBarThickness: 28 }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ top: 22 } },
+        scales:{ x:{grid:{display:false}}, y:{ grid:{color:PALETTE.line}, ticks:{callback:v=>v+'%'} } },
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ label: ctx => ctx.parsed.y===null ? 'Sin dato previo' : (ctx.parsed.y>=0?'+':'')+ctx.parsed.y+'% vs. mes anterior' } },
+          totalLabels:{ mode:'perBarVertical', datasetIndex:0, formatter: v => v===null?'':(v>=0?'+':'')+v+'%' }
+        }
+      }
+    });
+  }catch(e){ showError('chart-ventas-crecimiento', e.message); }
 }
 
 function initProductos(){
   ['chart-prod-donut','chart-hist-cajas','chart-hist-unidades','chart-trim-cajas','chart-trim-unidades','chart-prod-mes'].forEach(resetCanvas);
   ['prodDonut','histCajas','histUnidades','trimCajas','trimUnidades','prodMes'].forEach(destroy);
-  clearTable('#tabla-productos'); clearTable('#tabla-promedios');
+  clearTable('#tabla-productos'); clearTable('#tabla-promedios'); clearTable('#tabla-movers');
 
   const colors = [PALETTE.red, PALETTE.redDeep, PALETTE.cacao, PALETTE.olive, PALETTE.gold, PALETTE.sand];
 
@@ -1604,12 +1752,58 @@ function initProductos(){
       }
     });
   }catch(e){ showError('chart-prod-mes', e.message); }
+
+  try{
+    const caption = document.getElementById('movers-caption');
+    if(DATA.product_movers && DATA.product_movers.length){
+      const [mPrev, mLast] = DATA.product_movers._meses;
+      caption.textContent = fmtMes(mPrev) + ' → ' + fmtMes(mLast) + ' · cajas vendidas, mayor variación absoluta primero';
+      const tbody = document.querySelector('#tabla-movers tbody');
+      DATA.product_movers.forEach(m=>{
+        const arrow = m.delta > 0 ? '▲' : m.delta < 0 ? '▼' : '—';
+        const color = m.delta > 0 ? PALETTE.olive : m.delta < 0 ? PALETTE.red : PALETTE.inkSoft;
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+m.producto+'</td><td class="num mono">'+m.anterior.toLocaleString('es-AR')+'</td><td class="num mono">'+m.actual.toLocaleString('es-AR')+'</td>'+
+          '<td class="num mono" style="color:'+color+'">'+arrow+' '+Math.abs(m.delta).toLocaleString('es-AR')+'</td>'+
+          '<td class="num mono" style="color:'+color+'">'+(m.pct>=0?'+':'')+m.pct+'%</td>';
+        tbody.appendChild(tr);
+      });
+    } else {
+      caption.textContent = 'No hay suficientes meses en el rango seleccionado para comparar.';
+    }
+  }catch(e){ console.error('tabla-movers', e); }
 }
 
 function initClientes(){
-  ['chart-cli-pareto','chart-cli-activos'].forEach(resetCanvas);
-  ['cliPareto','cliActivos'].forEach(destroy);
+  ['chart-cli-pareto','chart-cli-activos','chart-cli-segmentos'].forEach(resetCanvas);
+  ['cliPareto','cliActivos','cliSegmentos'].forEach(destroy);
   clearTable('#tabla-dormidos');
+
+  try{
+    const segColors = { 'Nuevo': PALETTE.gold, 'Activo': PALETTE.olive, 'En riesgo': '#C9873A', 'Inactivo': PALETTE.red };
+    const segs = DATA.cliente_segmentos;
+    charts.cliSegmentos = new Chart(document.getElementById('chart-cli-segmentos'), {
+      type:'bar',
+      data:{
+        labels: segs.map(s=>s.nombre),
+        datasets:[{ label:'Clientes', data: segs.map(s=>s.count), backgroundColor: segs.map(s=>segColors[s.nombre]), borderRadius:3, maxBarThickness: 60 }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ right: 70 } },
+        scales:{ x:{ grid:{color:PALETTE.line}, beginAtZero:true, grace:'20%' }, y:{ grid:{display:false} } },
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ label: ctx => {
+            const s = segs[ctx.dataIndex];
+            return s.count + ' clientes · ' + fmtARSk(s.monto) + ' facturados';
+          } } },
+          totalLabels:{ mode:'horizontalEnd', datasetIndex:0, formatter: v => v + ' clientes' }
+        }
+      }
+    });
+  }catch(e){ showError('chart-cli-segmentos', e.message); }
 
   try{
     charts.cliPareto = new Chart(document.getElementById('chart-cli-pareto'), {
@@ -1744,7 +1938,7 @@ function initCaja(){
 function initRentabilidad(){
   ['chart-rent-prod','chart-rent-ranking','chart-rent-evol'].forEach(resetCanvas);
   ['rentProd','rentRanking','rentEvol'].forEach(destroy);
-  clearTable('#tabla-rentabilidad');
+  clearTable('#tabla-rentabilidad'); clearTable('#tabla-rent-cliente');
 
   document.getElementById('rent-sub').textContent = 'Período filtrado · Ventas nominales vs. costo estimado (ver COSTS_PER_BOX en el código)';
 
@@ -1841,6 +2035,15 @@ function initRentabilidad(){
       }
     });
   }catch(e){ showError('chart-rent-evol', e.message); }
+
+  try{
+    const tbodyRC = document.querySelector('#tabla-rent-cliente tbody');
+    DATA.rent_cliente.forEach(c=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+c.cliente+'</td><td class="num mono">'+fmtARS(c.ventas)+'</td><td class="num mono">'+fmtARS(c.costo)+'</td><td class="num mono">'+fmtARS(c.utilidad)+'</td><td class="num mono">'+c.margen+'%</td>';
+      tbodyRC.appendChild(tr);
+    });
+  }catch(e){ console.error('tabla-rent-cliente', e); }
 }
 
 const initFns = { resumen: initResumen, ventas: initVentas, productos: initProductos, clientes: initClientes, caja: initCaja, rentabilidad: initRentabilidad };
