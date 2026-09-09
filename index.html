@@ -504,9 +504,9 @@ footer{
 
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">Ventas totales (nominal)</div>
+        <div class="kpi-label">Ventas totales (facturado)</div>
         <div class="kpi-value" id="kpi-ventas">-</div>
-        <div class="kpi-foot">Todas las líneas pagadas, pesos históricos sin ajuste</div>
+        <div class="kpi-foot" id="kpi-ventas-foot">Facturado (pagado + impago), excluye cancelados</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Ticket promedio / mediana</div>
@@ -524,7 +524,7 @@ footer{
         <div class="kpi-foot" id="kpi-dormidos-foot">-</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Ventas totales (todas)</div>
+        <div class="kpi-label">Pendiente de cobro</div>
         <div class="kpi-value small" id="kpi-cobros">-</div>
         <div class="kpi-foot" id="kpi-cobros-foot">-</div>
       </div>
@@ -543,7 +543,7 @@ footer{
       </div>
       <div class="card">
         <div class="card-title">Comercios activos por mes</div>
-        <div class="card-caption">Cantidad de clientes distintos con al menos 1 pedido pagado</div>
+        <div class="card-caption">Cantidad de clientes distintos con al menos 1 pedido facturado (excl. cancelados)</div>
         <div class="chart-wrap h-320"><canvas id="chart-resumen-clientes"></canvas><div class="chart-error"></div></div>
       </div>
     </div>
@@ -577,7 +577,7 @@ footer{
   <!-- ============ PRODUCTOS ============ -->
   <section class="panel" id="panel-productos">
     <div class="section-title">Peso por producto</div>
-    <div class="section-sub">Participación sobre ventas totales pagadas (nominal)</div>
+    <div class="section-sub">Participación sobre ventas totales facturadas (nominal, excl. cancelados)</div>
 
     <div class="grid-2">
       <div class="card">
@@ -587,7 +587,7 @@ footer{
       </div>
       <div class="card">
         <div class="card-title">Detalle por producto</div>
-        <div class="card-caption">Cajas vendidas y unidades reales (cajas × formato) — todas las líneas pagadas</div>
+        <div class="card-caption">Cajas vendidas y unidades reales (cajas × formato) — todas las líneas facturadas</div>
         <div class="scroll-table">
         <table id="tabla-productos">
           <thead><tr><th>Producto</th><th class="num">Monto</th><th class="num">Cajas</th><th class="num">Unidades</th><th class="num">% del monto</th></tr></thead>
@@ -603,7 +603,7 @@ footer{
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Cajas vendidas por producto</div>
-        <div class="card-caption">Total de cajas/paquetes — todas las líneas pagadas</div>
+        <div class="card-caption">Total de cajas/paquetes — todas las líneas facturadas</div>
         <div class="chart-wrap h-320"><canvas id="chart-hist-cajas"></canvas><div class="chart-error"></div></div>
       </div>
       <div class="card">
@@ -642,7 +642,7 @@ footer{
 
     <div class="grid-1 card">
       <div class="card-title">Cajas vendidas por producto y mes</div>
-      <div class="card-caption">Todas las líneas pagadas, incluye eventos · vista mensual complementaria</div>
+      <div class="card-caption">Todas las líneas facturadas, incluye eventos · vista mensual complementaria</div>
       <div class="chart-wrap h-360"><canvas id="chart-prod-mes"></canvas><div class="chart-error"></div></div>
     </div>
   </section>
@@ -661,7 +661,7 @@ footer{
     <div class="grid-2">
       <div class="card">
         <div class="card-title">Comercios activos por mes</div>
-        <div class="card-caption">Cantidad de clientes con pedido pagado en el mes</div>
+        <div class="card-caption">Cantidad de clientes con pedido facturado en el mes</div>
         <div class="chart-wrap h-320"><canvas id="chart-cli-activos"></canvas><div class="chart-error"></div></div>
       </div>
       <div class="card">
@@ -911,13 +911,13 @@ function categorizeExpense(notes){
 function queryRaw(){
   const lines = q(`
     SELECT o.id AS order_id, o.created AS created, o.customerId AS customer_id,
-           c.name AS customer_name, p.name AS product_name,
+           c.name AS customer_name, p.name AS product_name, o.status AS status,
            op.quantity AS quantity, op.price AS price
     FROM orders o
     JOIN order_products op ON op.orderId = o.id
     JOIN products p ON p.id = op.productId
     LEFT JOIN customers c ON c.id = o.customerId
-    WHERE o.status = 'PAID'
+    WHERE o.status != 'CANCELED'
   `);
   lines.forEach(l => {
     l.month = monthOf(l.created);
@@ -1068,6 +1068,7 @@ function buildData(lines, wallet){
 
   // ---- KPIs resumen ----
   const kpi_ventas_totales = Math.round(lines.reduce((a,l)=>a+l.monto,0));
+  const kpi_ventas_pendientes = Math.round(lines.filter(l=>l.status!=='PAID').reduce((a,l)=>a+l.monto,0));
   const ordersTotals = {};
   lines.forEach(l=>{ ordersTotals[l.order_id] = (ordersTotals[l.order_id]||0) + l.monto; });
   const orderTotalsArr = Object.values(ordersTotals);
@@ -1161,7 +1162,7 @@ function buildData(lines, wallet){
     dormidos_count, dormidos_total, dormidos_lista,
     meses_caja, caja_orden, caja_pago, caja_interno, caja_neto,
     gastos_labels, gastos_monto,
-    kpi_ventas_totales, kpi_ticket_promedio, kpi_ticket_mediana, kpi_total_clientes, kpi_total_pedidos,
+    kpi_ventas_totales, kpi_ventas_pendientes, kpi_ticket_promedio, kpi_ticket_mediana, kpi_total_clientes, kpi_total_pedidos,
     kpi_total_egresos, kpi_cobros_orden, kpi_pct_1pedido,
     hist_prod_labels, hist_prod_cajas, hist_prod_unidades, hist_prod_prom_cajas, hist_prod_prom_unid,
     hist_prod_lineas, prom_cajas_general, prom_unid_general,
@@ -1288,14 +1289,15 @@ function resetCanvas(id){
 // ---------------- KPIs ----------------
 function fillKPIs(){
   document.getElementById('kpi-ventas').textContent = fmtARSk(DATA.kpi_ventas_totales);
+  const pctPend = DATA.kpi_ventas_totales ? Math.round(100*DATA.kpi_ventas_pendientes/DATA.kpi_ventas_totales) : 0;
+  document.getElementById('kpi-ventas-foot').textContent = 'Facturado (pagado + impago) · ' + fmtARSk(DATA.kpi_ventas_pendientes) + ' sin cobrar (' + pctPend + '%)';
   document.getElementById('kpi-ticket').textContent = fmtARSk(DATA.kpi_ticket_promedio);
   document.getElementById('kpi-ticket-med').textContent = 'Mediana: ' + fmtARSk(DATA.kpi_ticket_mediana);
   document.getElementById('kpi-pedcli').textContent = DATA.kpi_total_pedidos + ' / ' + DATA.kpi_total_clientes;
   document.getElementById('kpi-dormidos').textContent = DATA.dormidos_count + ' / ' + DATA.dormidos_total;
   document.getElementById('kpi-dormidos-foot').textContent = (DATA.dormidos_total ? Math.round(100*DATA.dormidos_count/DATA.dormidos_total) : 0) + '% de la cartera sin compras hace más de ' + DORMIDO_DIAS + ' días';
-  document.getElementById('kpi-cobros').textContent = fmtARSk(DATA.kpi_ventas_totales);
-  const coberturaCaja = DATA.kpi_ventas_totales ? Math.round(100*DATA.kpi_cobros_orden/DATA.kpi_ventas_totales) : 0;
-  document.getElementById('kpi-cobros-foot').textContent = 'Caja registra ' + fmtARSk(DATA.kpi_cobros_orden) + ' (' + coberturaCaja + '%) — tiene meses sin cargar';
+  document.getElementById('kpi-cobros').textContent = fmtARSk(DATA.kpi_ventas_pendientes);
+  document.getElementById('kpi-cobros-foot').textContent = pctPend + '% del total facturado — pedidos marcados IMPAGO o PENDIENTE';
   document.getElementById('kpi-egresos').textContent = fmtARSk(DATA.kpi_total_egresos);
 
   const first = DATA.meses[0], last = DATA.meses[DATA.meses.length-1];
@@ -1748,7 +1750,7 @@ function initRentabilidad(){
 
   try{
     document.getElementById('kpi-rent-ventas').textContent = fmtARSk(DATA.rent_kpi_ventas);
-    document.getElementById('kpi-rent-lineas').textContent = DATA.rent_kpi_lineas + ' líneas pagadas en el período';
+    document.getElementById('kpi-rent-lineas').textContent = DATA.rent_kpi_lineas + ' líneas facturadas en el período';
     document.getElementById('kpi-rent-costo').textContent = fmtARSk(DATA.rent_kpi_costo);
     document.getElementById('kpi-rent-utilidad').textContent = fmtARSk(DATA.rent_kpi_utilidad);
     document.getElementById('kpi-rent-margen').textContent = DATA.rent_kpi_margen + '%';
