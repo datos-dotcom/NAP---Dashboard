@@ -1,3 +1,13 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/db"
+  to = "/.netlify/functions/db"
+  status = 200
+
+[[redirects]]
+  from = "/api/egresos"
+  to = "/.netlify/functions/egresos"
+  status = 200
