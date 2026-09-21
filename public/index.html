@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NAP · Panel de datos históricos</title>
+<title>NAP · Panel de ventas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -275,6 +275,7 @@ main{
 }
 
 .kpi-card.good::before{ background: var(--olive); }
+.kpi-card.warn::before{ background: var(--gold); }
 
 .kpi-label{
   font-size: 0.68rem;
@@ -383,6 +384,9 @@ thead th{
   color: var(--ink-soft);
   padding: 8px 10px;
   border-bottom: 2px solid var(--line);
+  background: var(--white);
+  position: sticky;
+  top: 0;
 }
 
 tbody td{
@@ -390,6 +394,7 @@ tbody td{
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   font-weight: 500;
+  vertical-align: top;
 }
 
 tbody tr:hover{ background: var(--cream-deep); }
@@ -408,6 +413,7 @@ tr.total-row:hover td{ background: var(--cream-deep); }
 .num{ text-align: right; }
 
 .scroll-table{ max-height: 420px; overflow-y: auto; }
+.scroll-table.tall{ max-height: 620px; }
 
 footer{
   max-width: 1280px;
@@ -458,6 +464,45 @@ footer{
 @keyframes spin{ to{ transform: rotate(360deg); } }
 .loading-screen p{ font-size:0.8rem; font-weight:600; color: var(--ink-soft); }
 .loading-screen.hidden{ display:none; }
+
+/* ---------- status badges (pedidos) ---------- */
+.status-badge{
+  display:inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.status-badge.paid{ background: rgba(110,127,74,0.15); color: var(--olive); }
+.status-badge.unpaid{ background: rgba(203,20,38,0.10); color: var(--red); }
+.status-badge.pending{ background: rgba(201,162,39,0.15); color: #7A5E10; }
+.status-badge.parcial{ background: rgba(201,162,39,0.15); color: #7A5E10; }
+.status-badge.canceled{ background: rgba(107,90,80,0.12); color: var(--ink-soft); text-decoration: line-through; }
+
+/* ---------- search box (pedidos) ---------- */
+.search-row{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  margin-bottom: 14px;
+}
+.search-box{
+  flex: 1 1 260px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 12px;
+}
+.search-box:focus{ outline: 2px solid var(--red); outline-offset: 1px; }
+.search-count{
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
 </style>
 </head>
 <body>
@@ -473,7 +518,7 @@ footer{
       <div class="brand-mark"></div>
       <div class="brand-text">
         <h1>NAP · Nougat Alfajores Premium</h1>
-        <p>Panel de datos históricos · Consultoría</p>
+        <p>Panel de ventas</p>
       </div>
     </div>
     <div class="period-tag">
@@ -483,12 +528,12 @@ footer{
     </div>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" data-tab="resumen"><span class="tab-num">00</span>Resumen</button>
-    <button class="tab-btn" data-tab="ventas"><span class="tab-num">01</span>Evolución de ventas</button>
-    <button class="tab-btn" data-tab="productos"><span class="tab-num">02</span>Productos</button>
-    <button class="tab-btn" data-tab="clientes"><span class="tab-num">03</span>Clientes</button>
-    <button class="tab-btn" data-tab="caja"><span class="tab-num">04</span>Caja &amp; gastos</button>
-    <button class="tab-btn" data-tab="rentabilidad"><span class="tab-num">05</span>Rentabilidad</button>
+    <button class="tab-btn active" data-tab="resumen"><span class="tab-num">01</span>KPIs generales</button>
+    <button class="tab-btn" data-tab="ventas"><span class="tab-num">02</span>Evolución de ventas</button>
+    <button class="tab-btn" data-tab="productos"><span class="tab-num">03</span>Productos</button>
+    <button class="tab-btn" data-tab="clientes"><span class="tab-num">04</span>Top clientes</button>
+    <button class="tab-btn" data-tab="pedidos"><span class="tab-num">05</span>Detalle de pedidos</button>
+    <button class="tab-btn" data-tab="egresos"><span class="tab-num">06</span>Egresos</button>
   </div>
   <div class="filter-bar">
     <label class="filter-field">
@@ -508,29 +553,39 @@ footer{
 <main>
   <div class="noscript-banner" id="error-banner">No se pudieron cargar los gráficos. Revisá la consola del navegador para más detalle.</div>
 
-  <!-- ============ RESUMEN ============ -->
+  <!-- ============ 01 · KPIs GENERALES ============ -->
   <section class="panel active" id="panel-resumen">
-    <div class="section-title">Resumen general</div>
+    <div class="section-title">KPIs generales</div>
     <div class="section-sub" id="resumen-sub">-</div>
 
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">Ventas totales (facturado)</div>
+        <div class="kpi-label">Total vendido (facturado)</div>
         <div class="kpi-value-row">
           <div class="kpi-value" id="kpi-ventas">-</div>
           <span class="delta-badge" id="kpi-ventas-delta"></span>
         </div>
-        <div class="kpi-foot" id="kpi-ventas-foot">Facturado (pagado + impago), excluye cancelados</div>
+        <div class="kpi-foot" id="kpi-ventas-foot">Incluye pagado + impago, excluye pedidos cancelados</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Ticket promedio / mediana</div>
+        <div class="kpi-label">Cantidad de pedidos</div>
+        <div class="kpi-value" id="kpi-pedidos">-</div>
+        <div class="kpi-foot" id="kpi-pedidos-foot">-</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cantidad de clientes</div>
+        <div class="kpi-value" id="kpi-clientes">-</div>
+        <div class="kpi-foot" id="kpi-clientes-foot">Comercios distintos con al menos 1 pedido en el período</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Venta promedio (ticket)</div>
         <div class="kpi-value small" id="kpi-ticket">-</div>
         <div class="kpi-foot" id="kpi-ticket-med">-</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Pedidos / Clientes</div>
-        <div class="kpi-value small" id="kpi-pedcli">-</div>
-        <div class="kpi-foot">Comercios distintos en el período</div>
+      <div class="kpi-card warn">
+        <div class="kpi-label">Pendiente de cobro</div>
+        <div class="kpi-value small" id="kpi-cobros">-</div>
+        <div class="kpi-foot" id="kpi-cobros-foot">-</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Clientes inactivos</div>
@@ -538,35 +593,29 @@ footer{
         <div class="kpi-foot" id="kpi-dormidos-foot">-</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Pendiente de cobro</div>
-        <div class="kpi-value small" id="kpi-cobros">-</div>
-        <div class="kpi-foot" id="kpi-cobros-foot">-</div>
-      </div>
-      <div class="kpi-card">
         <div class="kpi-label">Egresos registrados</div>
         <div class="kpi-value small" id="kpi-egresos">-</div>
-        <div class="kpi-foot">Insumos, comisiones, gastos varios</div>
+        <div class="kpi-foot">Pagos a proveedores + movimientos internos negativos en caja</div>
       </div>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Ventas mensuales — canal regular vs. eventos</div>
-        <div class="card-caption">Pesos nominales · apilado</div>
-        <div class="chart-wrap h-320"><canvas id="chart-resumen-ventas"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Comercios activos por mes</div>
-        <div class="card-caption">Cantidad de clientes distintos con al menos 1 pedido facturado (excl. cancelados)</div>
-        <div class="chart-wrap h-320"><canvas id="chart-resumen-clientes"></canvas><div class="chart-error"></div></div>
-      </div>
+    <div class="grid-1 card">
+      <div class="card-title">Ventas mensuales — canal regular vs. eventos</div>
+      <div class="card-caption">Pesos nominales · apilado</div>
+      <div class="chart-wrap h-320"><canvas id="chart-resumen-ventas"></canvas><div class="chart-error"></div></div>
+    </div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Comercios activos por mes</div>
+      <div class="card-caption">Clientes distintos con al menos 1 pedido facturado</div>
+      <div class="chart-wrap h-320"><canvas id="chart-resumen-clientes"></canvas><div class="chart-error"></div></div>
     </div>
   </section>
 
-  <!-- ============ VENTAS ============ -->
+  <!-- ============ 02 · EVOLUCIÓN DE VENTAS ============ -->
   <section class="panel" id="panel-ventas">
     <div class="section-title">Evolución de ventas</div>
-    <div class="section-sub">Detalle de pedidos · pesos nominales (sin ajuste por inflación)</div>
+    <div class="section-sub">Por mes · canal regular vs. eventos · pesos nominales (sin ajuste por inflación)</div>
 
     <div class="grid-1 card">
       <div class="card-title">Ventas mensuales — canal regular vs. eventos</div>
@@ -574,16 +623,17 @@ footer{
       <div class="chart-wrap h-360"><canvas id="chart-ventas-evol"></canvas><div class="chart-error"></div></div>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Pedidos y ticket promedio por mes</div>
-        <div class="card-caption">Cantidad de pedidos (barra) vs. ticket promedio nominal (línea)</div>
-        <div class="chart-wrap h-320"><canvas id="chart-ventas-ticket"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Precio por formato</div>
-        <div class="card-caption">Precio unitario promedio nominal, por período (se adapta al rango filtrado)</div>
-        <div class="chart-wrap h-320"><canvas id="chart-ventas-precio"></canvas><div class="chart-error"></div></div>
+    <div class="grid-1 card">
+      <div class="card-title">Tabla de evolución mensual</div>
+      <div class="card-caption">Venta regular vs. eventos, variación contra el mes anterior, pedidos y ticket promedio</div>
+      <div class="scroll-table">
+      <table id="tabla-evolucion">
+        <thead><tr>
+          <th>Mes</th><th class="num">Venta regular</th><th class="num">Venta eventos</th><th class="num">Total</th>
+          <th class="num">Var. % vs. mes ant.</th><th class="num">Pedidos</th><th class="num">Ticket prom.</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
       </div>
     </div>
 
@@ -594,76 +644,38 @@ footer{
     </div>
   </section>
 
-  <!-- ============ PRODUCTOS ============ -->
+  <!-- ============ 03 · PRODUCTOS ============ -->
   <section class="panel" id="panel-productos">
-    <div class="section-title">Peso por producto</div>
+    <div class="section-title">Detalle de productos vendidos</div>
     <div class="section-sub">Participación sobre ventas totales facturadas (nominal, excl. cancelados)</div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Participación por producto — canal regular</div>
-        <div class="card-caption">Excluye "Alfajor Unidad Eventos" (venta puntual de exposiciones)</div>
-        <div class="chart-wrap h-360"><canvas id="chart-prod-donut"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Detalle por producto</div>
-        <div class="card-caption">Cajas vendidas y unidades reales (cajas × formato) — todas las líneas facturadas</div>
-        <div class="scroll-table">
-        <table id="tabla-productos">
-          <thead><tr><th>Producto</th><th class="num">Monto</th><th class="num">Cajas</th><th class="num">Unidades</th><th class="num">% del monto</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-title" style="font-size:1.15rem; margin-top:8px;">Cantidad vendida — cajas vs. unidades</div>
-    <div class="card-caption" style="margin-bottom:16px;">Ej: 20 cajas de x12 = 240 unidades (20 × 12). Promedio general: <strong id="prom-general-txt">-</strong></div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Cajas vendidas por producto</div>
-        <div class="card-caption">Total de cajas/paquetes — todas las líneas facturadas</div>
-        <div class="chart-wrap h-320"><canvas id="chart-hist-cajas"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Unidades totales por producto</div>
-        <div class="card-caption">Cajas × formato (según el nombre del producto, ej. "X 12")</div>
-        <div class="chart-wrap h-320"><canvas id="chart-hist-unidades"></canvas><div class="chart-error"></div></div>
-      </div>
+    <div class="grid-1 card">
+      <div class="card-title">Participación por producto — canal regular</div>
+      <div class="card-caption">Excluye "Alfajor Unidad Eventos" (venta puntual de exposiciones) y ajustes/descuentos</div>
+      <div class="chart-wrap h-360"><canvas id="chart-prod-donut"></canvas><div class="chart-error"></div></div>
     </div>
 
     <div class="grid-1 card">
-      <div class="card-title">Promedio de cajas y unidades por línea de pedido, por producto</div>
-      <div class="card-caption">Tamaño promedio del pedido para cada producto</div>
+      <div class="card-title">Detalle por producto</div>
+      <div class="card-caption">Monto, cajas y unidades reales (cajas × formato) — todas las líneas facturadas</div>
       <div class="scroll-table">
-      <table id="tabla-promedios">
-        <thead><tr><th>Producto</th><th class="num">Líneas</th><th class="num">Prom. cajas/línea</th><th class="num">Prom. unidades/línea</th></tr></thead>
+      <table id="tabla-productos">
+        <thead><tr><th>Producto</th><th class="num">Monto</th><th class="num">Cajas</th><th class="num">Unidades</th><th class="num">% del monto</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
     </div>
 
-    <div class="section-title" style="font-size:1.15rem; margin-top:8px;">Evolución trimestral</div>
-    <div class="card-caption" style="margin-bottom:16px;">Cajas y unidades vendidas por período, por producto principal</div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Cajas vendidas por período</div>
-        <div class="card-caption">Apilado por producto</div>
-        <div class="chart-wrap h-320"><canvas id="chart-trim-cajas"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Unidades vendidas por período</div>
-        <div class="card-caption">Apilado por producto</div>
-        <div class="chart-wrap h-320"><canvas id="chart-trim-unidades"></canvas><div class="chart-error"></div></div>
-      </div>
+    <div class="grid-1 card">
+      <div class="card-title">Cajas vendidas por producto</div>
+      <div class="card-caption">Total de cajas/paquetes — todas las líneas facturadas</div>
+      <div class="chart-wrap h-320"><canvas id="chart-hist-cajas"></canvas><div class="chart-error"></div></div>
     </div>
 
     <div class="grid-1 card">
-      <div class="card-title">Cajas vendidas por producto y mes</div>
-      <div class="card-caption">Todas las líneas facturadas, incluye eventos · vista mensual complementaria</div>
-      <div class="chart-wrap h-360"><canvas id="chart-prod-mes"></canvas><div class="chart-error"></div></div>
+      <div class="card-title">Unidades totales por producto</div>
+      <div class="card-caption">Cajas × formato (según el nombre del producto, ej. "X 12")</div>
+      <div class="chart-wrap h-320"><canvas id="chart-hist-unidades"></canvas><div class="chart-error"></div></div>
     </div>
 
     <div class="grid-1 card">
@@ -678,10 +690,10 @@ footer{
     </div>
   </section>
 
-  <!-- ============ CLIENTES ============ -->
+  <!-- ============ 04 · TOP CLIENTES ============ -->
   <section class="panel" id="panel-clientes">
-    <div class="section-title">Clientes / comercios</div>
-    <div class="section-sub">Concentración, actividad y rotación de la cartera</div>
+    <div class="section-title">Top clientes</div>
+    <div class="section-sub">Concentración, actividad y ranking completo de la cartera</div>
 
     <div class="grid-1 card">
       <div class="card-title">Segmentación por actividad</div>
@@ -695,172 +707,115 @@ footer{
       <div class="chart-wrap h-360"><canvas id="chart-cli-pareto"></canvas><div class="chart-error"></div></div>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Comercios activos por mes</div>
-        <div class="card-caption">Cantidad de clientes con pedido facturado en el mes</div>
-        <div class="chart-wrap h-320"><canvas id="chart-cli-activos"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Última compra registrada — clientes sin actividad reciente</div>
-        <div class="card-caption" id="dormidos-caption">-</div>
-        <div class="scroll-table">
-        <table id="tabla-dormidos">
-          <thead><tr><th>Cliente</th><th class="num">Última compra</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ CAJA ============ -->
-  <section class="panel" id="panel-caja">
-    <div class="section-title">Caja &amp; gastos</div>
-    <div class="section-sub">Movimientos de caja · pesos nominales</div>
-
-    <div class="warn-banner">Los egresos se agrupan por categoría con reglas de palabras clave sobre las notas de cada movimiento. Es una clasificación aproximada — revisála en el código si necesitás precisión contable.</div>
-
     <div class="grid-1 card">
-      <div class="card-title">Cobros, egresos y neto mensual</div>
-      <div class="card-caption">"Orden" = cobros · "Proveedor" = egresos a proveedores/gastos · "Interno" = movimientos internos</div>
-      <div class="chart-wrap h-360"><canvas id="chart-caja-evol"></canvas><div class="chart-error"></div></div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Egresos por categoría</div>
-        <div class="card-caption">Clasificación automática según texto de las notas</div>
-        <div class="chart-wrap h-320"><canvas id="chart-caja-gastos"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Detalle por categoría de gasto</div>
-        <div class="card-caption">Monto acumulado, todo el período disponible</div>
-        <div class="scroll-table">
-        <table id="tabla-gastos">
-          <thead><tr><th>Categoría</th><th class="num">Monto</th><th class="num">% del total</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ RENTABILIDAD ============ -->
-  <section class="panel" id="panel-rentabilidad">
-    <div class="section-title">Rentabilidad</div>
-    <div class="section-sub" id="rent-sub">-</div>
-
-    <div class="warn-banner">Los costos por producto NO están en la base del ERP (las tablas de insumos/compras están vacías) — se cargan a mano en <code>COSTS_PER_BOX</code> dentro del HTML. Son valores de referencia: actualizalos cuando cambien tus costos reales para que el margen sea confiable.</div>
-
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Ventas año actual</div>
-        <div class="kpi-value small" id="kpi-rent-ventas">-</div>
-        <div class="kpi-foot" id="kpi-rent-lineas">-</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Costo año actual (estimado)</div>
-        <div class="kpi-value small" id="kpi-rent-costo">-</div>
-        <div class="kpi-foot">Según COSTS_PER_BOX cargado en el código</div>
-      </div>
-      <div class="kpi-card good">
-        <div class="kpi-label">Utilidad bruta estimada</div>
-        <div class="kpi-value small" id="kpi-rent-utilidad">-</div>
-        <div class="kpi-foot">Ventas − Costo estimado</div>
-      </div>
-      <div class="kpi-card good">
-        <div class="kpi-label">Margen bruto estimado</div>
-        <div class="kpi-value" id="kpi-rent-margen">-</div>
-        <div class="kpi-foot">Sobre ventas del período</div>
-      </div>
-    </div>
-
-    <div class="grid-1 card">
-      <div class="card-title">Ventas, costo y utilidad por producto</div>
-      <div class="card-caption">Pesos · año actual</div>
-      <div class="chart-wrap h-360"><canvas id="chart-rent-prod"></canvas><div class="chart-error"></div></div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">Ranking de margen (%) por producto</div>
-        <div class="card-caption">Rentabilidad relativa, no en $ sino en % sobre ventas</div>
-        <div class="chart-wrap h-320"><canvas id="chart-rent-ranking"></canvas><div class="chart-error"></div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Detalle por producto</div>
-        <div class="card-caption">Ventas, costo estimado, utilidad y margen — año actual</div>
-        <div class="scroll-table">
-        <table id="tabla-rentabilidad">
-          <thead><tr><th>Producto</th><th class="num">Ventas</th><th class="num">Costo</th><th class="num">Utilidad</th><th class="num">Margen %</th></tr></thead>
-          <tbody></tbody>
-        </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid-1 card">
-      <div class="card-title">Evolución mensual de utilidad y margen</div>
-      <div class="card-caption">Utilidad (barra) vs. margen % (línea) — año actual</div>
-      <div class="chart-wrap h-360"><canvas id="chart-rent-evol"></canvas><div class="chart-error"></div></div>
-    </div>
-
-    <div class="grid-1 card">
-      <div class="card-title">Margen por cliente — top 10</div>
-      <div class="card-caption">Mismo criterio de costo estimado (COSTS_PER_BOX), agregado por comercio</div>
-      <div class="scroll-table">
-      <table id="tabla-rent-cliente">
-        <thead><tr><th>Cliente</th><th class="num">Ventas</th><th class="num">Costo</th><th class="num">Utilidad</th><th class="num">Margen %</th></tr></thead>
+      <div class="card-title">Ranking completo de clientes</div>
+      <div class="card-caption">Ordenado por ventas totales · incluye pedidos, ticket promedio, última compra y segmento</div>
+      <div class="scroll-table tall">
+      <table id="tabla-clientes">
+        <thead><tr>
+          <th>#</th><th>Cliente</th><th class="num">Ventas</th><th class="num">% del total</th>
+          <th class="num">Pedidos</th><th class="num">Ticket prom.</th><th>Última compra</th><th>Segmento</th>
+        </tr></thead>
         <tbody></tbody>
       </table>
       </div>
     </div>
   </section>
 
+  <!-- ============ 05 · DETALLE DE PEDIDOS ============ -->
+  <section class="panel" id="panel-pedidos">
+    <div class="section-title">Detalle de pedidos</div>
+    <div class="section-sub">Todo el detalle disponible por pedido, incluye cancelados · orden: más reciente primero</div>
+
+    <div class="grid-1 card">
+      <div class="search-row">
+        <input type="text" class="search-box" id="pedidos-search" placeholder="Buscar por cliente, producto, N° de pedido o comprobante…">
+        <span class="search-count" id="pedidos-count">-</span>
+      </div>
+      <div class="scroll-table tall">
+      <table id="tabla-pedidos">
+        <thead><tr>
+          <th>N°</th><th>Fecha</th><th>Cliente</th><th>Productos</th><th class="num">Monto</th>
+          <th>Condición</th><th>Estado</th><th>Comprobante</th><th>Notas</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 06 · EGRESOS ============ -->
+  <section class="panel" id="panel-egresos">
+    <div class="section-title">Egresos</div>
+    <div class="section-sub" id="egresos-sub">Fuente: planilla de Google Sheets (Compras + Pagos) · pesos nominales</div>
+
+    <div class="warn-banner" id="egresos-warn" style="display:none;">No se pudo cargar la planilla de egresos. Verificá que las variables de entorno de la cuenta de servicio (GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_KEY, GOOGLE_SHEET_ID) estén cargadas en Netlify y que la planilla esté compartida con esa cuenta de servicio.</div>
+
+    <div id="egresos-content">
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total egresos</div>
+          <div class="kpi-value small" id="kpi-egr-total">-</div>
+          <div class="kpi-foot">Suma de "Compras" en el período seleccionado</div>
+        </div>
+        <div class="kpi-card warn">
+          <div class="kpi-label">Pendiente de pago</div>
+          <div class="kpi-value small" id="kpi-egr-pendiente">-</div>
+          <div class="kpi-foot" id="kpi-egr-pendiente-foot">Compras con saldo sin cubrir en "Pagos"</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Comprobantes</div>
+          <div class="kpi-value" id="kpi-egr-comprobantes">-</div>
+          <div class="kpi-foot">Cantidad de registros de compra en el período</div>
+        </div>
+      </div>
+
+      <div class="grid-1 card">
+        <div class="card-title">Egresos por categoría</div>
+        <div class="card-caption">Según "Tipo de Egreso" en la planilla</div>
+        <div class="chart-wrap h-320"><canvas id="chart-egr-categoria"></canvas><div class="chart-error"></div></div>
+      </div>
+
+      <div class="grid-1 card">
+        <div class="card-title">Evolución mensual de egresos</div>
+        <div class="card-caption">Monto total por mes</div>
+        <div class="chart-wrap h-320"><canvas id="chart-egr-evol"></canvas><div class="chart-error"></div></div>
+      </div>
+
+      <div class="grid-1 card">
+        <div class="search-row">
+          <input type="text" class="search-box" id="egresos-search" placeholder="Buscar por proveedor, categoría, subconcepto o comprobante…">
+          <span class="search-count" id="egresos-count">-</span>
+        </div>
+        <div class="scroll-table tall">
+        <table id="tabla-egresos">
+          <thead><tr>
+            <th>Fecha</th><th>Proveedor</th><th>Tipo</th><th>Subconcepto</th><th class="num">Monto</th>
+            <th>Comprobante</th><th>Estado de pago</th><th>Observaciones</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
-<footer id="footer-note">NAP · Panel de datos históricos generado a partir del sistema de gestión propio</footer>
+<footer id="footer-note">NAP · Panel de ventas generado a partir del sistema de gestión propio</footer>
 
 <script>
 (function(){
 
 /* =====================================================================
    CONFIGURACIÓN EDITABLE
-   Estos valores no están en la base del ERP (o son criterios de negocio)
-   y se mantienen a mano acá. Ajustalos cuando cambien.
 ===================================================================== */
-
-// Costo estimado por caja vendida, por nombre de producto (pesos nominales).
-// Punto de partida tomado del archivo de costos (escenario "1500" / "Clasico
-// negro") — son valores aproximados, no una fuente en vivo. Corregilos con
-// tus costos reales para que la pestaña de Rentabilidad sea confiable.
-const COSTS_PER_BOX = {
-  "Caja Alfajores Surtidos X 3": 6064,
-  "Caja Alfajores Surtidos X 6": 11054,
-  "Caja Alfajores Surtidos X 8": 13540,   // extrapolado, no viene del costeo original
-  "Caja Alfajores Surtidos X 12": 20308,
-  "Alfajor Surtido Unidad": 1692,
-  "Alfajor Unidad de cambio": 1692,
-  "Alfajor Unidad Eventos": 1692
-};
 
 // Días sin compra para considerar a un cliente "inactivo".
 const DORMIDO_DIAS = 60;
 
-// Reglas de categorización de egresos (wallet_transactions con monto < 0).
-// Se evalúan en orden; la primera que matchea gana. Palabras en minúscula.
-const EXPENSE_RULES = [
-  { cat: "Eventos / Muestras / Ferias", kws: ["muestra", "feria", "mundial", "campeonato", "expo"] },
-  { cat: "Logística / Envíos", kws: ["envio", "envío", "andreani", "correo", "oca ", "flete"] },
-  { cat: "Donación", kws: ["donac"] },
-  { cat: "Comisiones vendedores", kws: ["comision", "comisión", "vendedor"] },
-  { cat: "Equipamiento / Trámites", kws: ["microondas", "maquina", "máquina", "equipo", "tramite", "trámite", "habilitacion", "habilitación", "bandeja"] },
-  { cat: "Insumos / Materia prima", kws: ["choco", "nuez", "bolsa", "grafic", "sticker", "embalaje", "envase", "caja x", "proveedor"] },
-  { cat: "Movimientos bancarios internos", kws: ["debito cuenta dni", "débito cuenta dni", "debin", "transferencia", "balance", "prueba tarjeta"] }
-];
-
 const DB_ENDPOINT = "/api/db";
+const EGRESOS_ENDPOINT = "/api/egresos";
 const REFRESH_MS = 10 * 60 * 1000; // 10 minutos
 
 /* ===================================================================== */
@@ -872,11 +827,15 @@ const fmtARSk = n => {
   if(abs >= 1000) return '$' + (n/1000).toLocaleString('es-AR',{maximumFractionDigits:0}) + 'k';
   return '$' + Math.round(n).toLocaleString('es-AR');
 };
+const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const fmtMes = m => {
   const [y,mo] = m.split('-');
-  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  return meses[parseInt(mo,10)-1] + ' ' + y.slice(2);
+  return MESES_CORTOS[parseInt(mo,10)-1] + ' ' + y.slice(2);
 };
+function fmtFecha(ms){
+  const d = new Date(ms);
+  return d.getUTCDate() + ' ' + MESES_CORTOS[d.getUTCMonth()] + ' ' + d.getUTCFullYear();
+}
 
 const PALETTE = {
   red: '#CB1426', redDeep: '#8F0E1C', cacao: '#3A2418', gold: '#C9A227',
@@ -912,6 +871,89 @@ async function loadDatabase(){
   return { source, dbErr: res.headers.get('X-DB-Error') };
 }
 
+async function loadEgresos(){
+  try{
+    const res = await fetch(EGRESOS_ENDPOINT, { cache: 'no-store' });
+    if(!res.ok){
+      const text = await res.text().catch(()=>'');
+      throw new Error('HTTP ' + res.status + ' ' + text);
+    }
+    const payload = await res.json();
+    return {
+      raw: normalizeEgresos(payload),
+      source: res.headers.get('X-Egresos-Source') || 'desconocido',
+      err: res.headers.get('X-Egresos-Error')
+    };
+  }catch(e){
+    console.error('No se pudo cargar egresos:', e);
+    return null;
+  }
+}
+
+// Convierte { compras:[...], pagos:[...] } (tal como vienen de la hoja) en una
+// lista de compras enriquecida con cuánto se pagó de cada una y su estado.
+function normalizeEgresos(payload){
+  const pagosPorId = {};
+  (payload.pagos || []).forEach(p=>{
+    const id = p['ID Egreso'];
+    if(id === null || id === undefined || id === '') return;
+    const montoRaw = (p['Total_pago'] !== null && p['Total_pago'] !== undefined && p['Total_pago'] !== '')
+      ? p['Total_pago'] : p['Total factura'];
+    const monto = Number(montoRaw || 0);
+    pagosPorId[id] = (pagosPorId[id] || 0) + (isNaN(monto) ? 0 : monto);
+  });
+
+  const compras = (payload.compras || []).map(r=>{
+    const id = r['ID Egreso'];
+    const total = Number(r['Total'] || 0);
+    const pagado = pagosPorId[id] || 0;
+    const saldo = total - pagado;
+    let estado = 'Pendiente';
+    if(saldo <= 0.5) estado = 'Pagado';
+    else if(pagado > 0) estado = 'Parcial';
+    return {
+      id,
+      fechaMs: serialToMs(r['Fecha']),
+      proveedor: r['Proveedor'] || '(sin proveedor)',
+      tipo: r['Tipo de Egreso'] || '(sin categoría)',
+      subconcepto: r['Subconcepto'] || '—',
+      comprobante: (r['Nro Comprobante'] !== null && r['Nro Comprobante'] !== undefined && r['Nro Comprobante'] !== '') ? r['Nro Comprobante'] : '—',
+      total, pagado, saldo, estado,
+      observaciones: r['Observaciones'] || ''
+    };
+  });
+
+  return { compras };
+}
+
+const EGR_STATUS_CLASS = { 'Pagado':'paid', 'Parcial':'parcial', 'Pendiente':'unpaid' };
+
+function buildEgresosData(raw, fromMs, toMs){
+  if(!raw || !raw.compras) return null;
+  const inRange = ts => ts === null || ((fromMs===null||ts>=fromMs) && (toMs===null||ts<=toMs));
+  const rows = raw.compras.filter(r => inRange(r.fechaMs));
+
+  const conFecha = rows.filter(r=>r.fechaMs !== null);
+  const meses = [...new Set(conFecha.map(r=>monthOf(r.fechaMs)))].sort();
+  const period_labels = meses.map(fmtMes);
+  const egresos_mensual = meses.map(mes =>
+    Math.round(conFecha.filter(r=>monthOf(r.fechaMs)===mes).reduce((a,r)=>a+r.total,0))
+  );
+
+  const catAgg = {};
+  rows.forEach(r=>{ catAgg[r.tipo] = (catAgg[r.tipo]||0) + r.total; });
+  const categorias_labels = Object.keys(catAgg).sort((a,b)=>catAgg[b]-catAgg[a]);
+  const categorias_monto = categorias_labels.map(k=>Math.round(catAgg[k]));
+
+  const kpi_total = Math.round(rows.reduce((a,r)=>a+r.total,0));
+  const kpi_pendiente = Math.round(rows.reduce((a,r)=>a + Math.max(0, r.saldo), 0));
+  const kpi_comprobantes = rows.length;
+
+  const detalle = [...rows].sort((a,b)=>(b.fechaMs||0) - (a.fechaMs||0));
+
+  return { meses, period_labels, egresos_mensual, categorias_labels, categorias_monto, kpi_total, kpi_pendiente, kpi_comprobantes, detalle };
+}
+
 function q(sql){
   const res = db.exec(sql);
   if(!res.length) return [];
@@ -934,35 +976,13 @@ function monthOf(ms){
   const d = new Date(ms);
   return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0');
 }
-function dayOf(ms){
-  const d = new Date(ms);
-  return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
-}
-function quarterOf(month){
-  const [y, mo] = month.split('-').map(Number);
-  return y + 'Q' + Math.ceil(mo/3);
-}
-function quarterOfMs(ms){ return quarterOf(monthOf(ms)); }
-const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-function labelDay(key){
-  const [y,m,d] = key.split('-');
-  return parseInt(d,10) + ' ' + MESES_CORTOS[parseInt(m,10)-1];
-}
-function labelQuarter(key){ return key; } // ya viene como "2026Q3"
-
-// Elige automáticamente cada cuánto agrupar (día/mes/trimestre) según cuántos días
-// abarca el rango de datos que se está mostrando — así un filtro corto (ej. 1 mes)
-// no termina mostrando un gráfico con un solo punto.
-function choosePeriodGranularity(msArray){
-  if(!msArray.length) return { granularity:'month', keyOf: monthOf, labelOf: fmtMes };
-  const spanDays = (Math.max(...msArray) - Math.min(...msArray)) / (24*60*60*1000);
-  if(spanDays <= 62){
-    return { granularity:'day', keyOf: dayOf, labelOf: labelDay };
-  }
-  if(spanDays <= 730){
-    return { granularity:'month', keyOf: monthOf, labelOf: fmtMes };
-  }
-  return { granularity:'quarter', keyOf: quarterOfMs, labelOf: labelQuarter };
+// Convierte la fecha que manda la fuente de egresos a epoch-ms. El Apps Script
+// que usamos manda las fechas ya como epoch-ms (números grandes); si en algún
+// momento se conecta otra fuente que use el "serial" de Google Sheets (días
+// desde 1899-12-30, números chicos), se distingue por la magnitud del valor.
+function serialToMs(v){
+  if(typeof v !== 'number' || !isFinite(v)) return null;
+  return v > 1e11 ? Math.round(v) : Math.round((v - 25569) * 86400 * 1000);
 }
 function median(arr){
   if(!arr.length) return 0;
@@ -972,30 +992,29 @@ function median(arr){
 }
 function isEventoProd(name){ return name === 'Alfajor Unidad Eventos'; }
 function isAdjustmentProd(name){ return /descuento|cambio/i.test(name || ''); }
-function categorizeExpense(notes){
-  const n = (notes || '').toLowerCase();
-  for(const rule of EXPENSE_RULES){
-    if(rule.kws.some(k => n.includes(k))) return rule.cat;
-  }
-  return 'Sin clasificar';
-}
+
+const STATUS_LABEL = { PAID:'Pagado', UNPAID:'Impago', PENDING:'Pendiente', CANCELED:'Cancelado' };
+const STATUS_CLASS = { PAID:'paid', UNPAID:'unpaid', PENDING:'pending', CANCELED:'canceled' };
 
 /* ---------------- raw query (una vez por descarga de la base) ---------------- */
 
 function queryRaw(){
+  // Incluye TODOS los estados (incluso CANCELED) para poder mostrar el detalle
+  // completo de pedidos en la pestaña 05. El filtrado por estado se hace
+  // después, en buildData(), para el resto de las pestañas.
   const lines = q(`
-    SELECT o.id AS order_id, o.created AS created, o.customerId AS customer_id,
-           c.name AS customer_name, p.name AS product_name, o.status AS status,
+    SELECT o.id AS order_id, o.number AS order_number, o.created AS created,
+           o.customerId AS customer_id, c.name AS customer_name,
+           p.name AS product_name, o.status AS status, o.condition AS condition,
+           o.invoice AS invoice, o.info AS order_notes,
            op.quantity AS quantity, op.price AS price
     FROM orders o
     JOIN order_products op ON op.orderId = o.id
     JOIN products p ON p.id = op.productId
     LEFT JOIN customers c ON c.id = o.customerId
-    WHERE o.status != 'CANCELED'
   `);
   lines.forEach(l => {
     l.month = monthOf(l.created);
-    l.quarter = quarterOf(l.month);
     l.monto = (l.price || 0) * (l.quantity || 0);
     l.units = (l.quantity || 0) * boxUnits(l.product_name);
   });
@@ -1017,24 +1036,20 @@ function filterByDate(rawLines, rawWallet, fromMs, toMs){
 
 /* ---------------- build DATA (se recalcula al cambiar el filtro) ---------------- */
 
-function buildData(lines, wallet){
+function buildData(allLines, wallet){
   const now = Date.now();
-  const currentYear = new Date(now).getUTCFullYear();
 
-  // ---- granularidad adaptativa: día / mes / trimestre según el rango filtrado ----
-  const allTimes = lines.map(l=>l.created).concat(wallet.map(w=>w.created));
-  const { granularity: periodGranularity, keyOf: periodKeyOf, labelOf: periodLabelOf } = choosePeriodGranularity(allTimes);
-  lines.forEach(l => { l.period = periodKeyOf(l.created); });
-  wallet.forEach(w => { w.period = periodKeyOf(w.created); });
+  // Para KPIs, evolución de ventas, productos y clientes: excluye cancelados.
+  // El detalle de pedidos (pestaña 05) usa allLines (incluye cancelados).
+  const lines = allLines.filter(l => l.status !== 'CANCELED');
 
-  const meses = [...new Set(lines.map(l=>l.period))].sort();
-  const period_labels = meses.map(periodLabelOf);
-  const period_unit_label = periodGranularity==='day' ? 'día' : periodGranularity==='quarter' ? 'trimestre' : 'mes';
+  const meses = [...new Set(lines.map(l=>l.month))].sort();
+  const period_labels = meses.map(fmtMes);
 
-  // ---- ventas / pedidos / clientes / ticket, por período ----
+  // ---- ventas / pedidos / clientes / ticket, por mes ----
   const ventas_regular = [], ventas_eventos = [], clientes_activos = [], pedidos_count = [], ticket_promedio = [];
   meses.forEach(mes=>{
-    const rows = lines.filter(l=>l.period===mes);
+    const rows = lines.filter(l=>l.month===mes);
     const reg = rows.filter(l=>!isEventoProd(l.product_name)).reduce((a,l)=>a+l.monto,0);
     const ev  = rows.filter(l=>isEventoProd(l.product_name)).reduce((a,l)=>a+l.monto,0);
     ventas_regular.push(Math.round(reg));
@@ -1046,7 +1061,7 @@ function buildData(lines, wallet){
     ticket_promedio.push(orders.size ? Math.round(total/orders.size) : 0);
   });
 
-  // ---- crecimiento entre períodos (% sobre monto total, regular+eventos) ----
+  // ---- crecimiento mes a mes (% sobre monto total, regular+eventos) ----
   const mom_growth = meses.map((mes, i) => {
     if(i === 0) return null;
     const prev = ventas_regular[i-1] + ventas_eventos[i-1];
@@ -1055,7 +1070,18 @@ function buildData(lines, wallet){
     return +(100*(curr-prev)/prev).toFixed(1);
   });
 
-  // ---- productos (canal regular, top 5) ----
+  // ---- tabla de evolución mensual (regular / eventos / total / var% / pedidos / ticket) ----
+  const evolucion_mensual = meses.map((mes,i)=>({
+    mes: period_labels[i],
+    regular: ventas_regular[i],
+    eventos: ventas_eventos[i],
+    total: ventas_regular[i] + ventas_eventos[i],
+    variacion: mom_growth[i],
+    pedidos: pedidos_count[i],
+    ticket: ticket_promedio[i]
+  }));
+
+  // ---- productos ----
   const prodAgg = {};
   lines.forEach(l=>{
     const key = l.product_name || '(sin nombre)';
@@ -1072,25 +1098,16 @@ function buildData(lines, wallet){
   const top5 = regularLabels.slice(0,5);
   const productos_labels = top5;
   const productos_monto = top5.map(k=>Math.round(prodAgg[k].monto));
-  const productos_unid = top5.map(k=>prodAgg[k].cajas);
 
   const hist_prod_labels = productos_all_labels.filter(k=>prodAgg[k].cajas > 0);
   const hist_prod_cajas = hist_prod_labels.map(k=>prodAgg[k].cajas);
   const hist_prod_unidades = hist_prod_labels.map(k=>prodAgg[k].unidades);
-  const hist_prod_lineas = hist_prod_labels.map(k=>prodAgg[k].lineas);
-  const hist_prod_prom_cajas = hist_prod_labels.map(k=> +(prodAgg[k].cajas/prodAgg[k].lineas).toFixed(2));
-  const hist_prod_prom_unid = hist_prod_labels.map(k=> +(prodAgg[k].unidades/prodAgg[k].lineas).toFixed(2));
-  const sumCajas = hist_prod_cajas.reduce((a,b)=>a+b,0);
-  const sumUnid = hist_prod_unidades.reduce((a,b)=>a+b,0);
-  const sumLineas = hist_prod_lineas.reduce((a,b)=>a+b,0);
-  const prom_cajas_general = sumLineas ? +(sumCajas/sumLineas).toFixed(2) : 0;
-  const prom_unid_general = sumLineas ? +(sumUnid/sumLineas).toFixed(2) : 0;
 
   // ---- top movers: producto vs. mes anterior (cajas) ----
   let product_movers = [];
   if(meses.length >= 2){
     const mLast = meses[meses.length-1], mPrev = meses[meses.length-2];
-    const cajasEnMes = (mes, prod) => lines.filter(l=>l.period===mes && l.product_name===prod).reduce((a,l)=>a+l.quantity,0);
+    const cajasEnMes = (mes, prod) => lines.filter(l=>l.month===mes && l.product_name===prod).reduce((a,l)=>a+l.quantity,0);
     product_movers = hist_prod_labels.map(prod=>{
       const actual = cajasEnMes(mLast, prod);
       const anterior = cajasEnMes(mPrev, prod);
@@ -1103,106 +1120,69 @@ function buildData(lines, wallet){
     product_movers._meses = [mPrev, mLast];
   }
 
-  // ---- precio por formato, por trimestre ----
-  const trimestres = meses; // alias: los gráficos "por trimestre" ahora usan la misma granularidad adaptativa
-  function avgPriceFor(pattern){
-    return trimestres.map(tr=>{
-      const rows = lines.filter(l=>l.period===tr && new RegExp(pattern,'i').test(l.product_name||''));
-      if(!rows.length) return 0;
-      return Math.round(rows.reduce((a,l)=>a+l.price,0)/rows.length);
-    });
-  }
-  const precio_x3 = avgPriceFor('x\\s*3\\b');
-  const precio_x6 = avgPriceFor('x\\s*6\\b');
-  const precio_x12 = avgPriceFor('x\\s*12\\b');
-
-  // ---- trimestral evolución (4 productos principales) ----
-  const trimProds = ["Caja Alfajores Surtidos X 12","Caja Alfajores Surtidos X 6","Caja Alfajores Surtidos X 3","Alfajor Surtido Unidad"];
-  const trim_evol_cajas = {}, trim_evol_unidades = {};
-  trimProds.forEach(p=>{
-    trim_evol_cajas[p] = trimestres.map(tr => lines.filter(l=>l.period===tr && l.product_name===p).reduce((a,l)=>a+l.quantity,0));
-    trim_evol_unidades[p] = trimestres.map(tr => lines.filter(l=>l.period===tr && l.product_name===p).reduce((a,l)=>a+l.units,0));
-  });
-  const trim_prom_cajas = trimestres.map(tr=>{
-    const rows = lines.filter(l=>l.period===tr);
-    const cajas = rows.reduce((a,l)=>a+l.quantity,0);
-    return rows.length ? +(cajas/rows.length).toFixed(2) : 0;
-  });
-  const trim_prom_unidades = trimestres.map(tr=>{
-    const rows = lines.filter(l=>l.period===tr);
-    const unid = rows.reduce((a,l)=>a+l.units,0);
-    return rows.length ? +(unid/rows.length).toFixed(2) : 0;
-  });
-
-  const cajas_por_producto_mes = {};
-  trimProds.forEach(p=>{
-    cajas_por_producto_mes[p] = meses.map(mes => lines.filter(l=>l.period===mes && l.product_name===p).reduce((a,l)=>a+l.quantity,0));
-  });
-
-  // ---- clientes (pareto) ----
+  // ---- clientes (pareto + ranking completo) ----
   const cliAgg = {};
   lines.forEach(l=>{
     const key = l.customer_name || '(sin nombre)';
-    cliAgg[key] = (cliAgg[key]||0) + l.monto;
+    if(!cliAgg[key]) cliAgg[key] = { monto:0, orders: new Set() };
+    cliAgg[key].monto += l.monto;
+    cliAgg[key].orders.add(l.order_id);
   });
-  const cliSorted = Object.keys(cliAgg).sort((a,b)=>cliAgg[b]-cliAgg[a]);
-  const totalVentasAll = cliSorted.reduce((a,k)=>a+cliAgg[k],0);
+  const cliSorted = Object.keys(cliAgg).sort((a,b)=>cliAgg[b].monto-cliAgg[a].monto);
+  const totalVentasAll = cliSorted.reduce((a,k)=>a+cliAgg[k].monto,0);
   const clientes_labels = cliSorted.slice(0,15);
-  const clientes_monto = clientes_labels.map(k=>Math.round(cliAgg[k]));
-  const clientes_pct = clientes_labels.map(k=> +(100*cliAgg[k]/totalVentasAll).toFixed(1));
+  const clientes_monto = clientes_labels.map(k=>Math.round(cliAgg[k].monto));
+  const clientes_pct = clientes_labels.map(k=> +(100*cliAgg[k].monto/totalVentasAll).toFixed(1));
   let acum = 0;
   const clientes_pct_acum = clientes_pct.map(p=>{ acum += p; return +acum.toFixed(1); });
   const clientes_totales = cliSorted.length;
-  let acumAll = 0, clientes_para_80pct = 0;
-  for(const k of cliSorted){
-    acumAll += 100*cliAgg[k]/totalVentasAll;
-    clientes_para_80pct++;
-    if(acumAll >= 80) break;
-  }
 
-  // ---- dormidos ----
+  // ---- última compra / dormidos / segmentación ----
   const lastPurchase = {};
   lines.forEach(l=>{
     const key = l.customer_name || '(sin nombre)';
     if(!lastPurchase[key] || l.created > lastPurchase[key]) lastPurchase[key] = l.created;
   });
   const cutoff = now - DORMIDO_DIAS*24*60*60*1000;
-  const dormidosArr = Object.entries(lastPurchase)
-    .filter(([,ts]) => ts < cutoff)
-    .map(([cliente, ts]) => ({ cliente, ultima_compra: new Date(ts).toISOString().slice(0,10), ts }))
-    .sort((a,b)=>a.ts-b.ts);
+  const dormidosArr = Object.entries(lastPurchase).filter(([,ts]) => ts < cutoff);
   const dormidos_count = dormidosArr.length;
   const dormidos_total = clientes_totales;
-  const dormidos_lista = dormidosArr.map(({cliente, ultima_compra})=>({cliente, ultima_compra}));
 
-  // ---- segmentación de clientes (Nuevo / Activo / En riesgo / Inactivo) ----
-  // Recencia calculada contra la fecha más reciente disponible en el rango filtrado
-  // (no siempre "hoy"), así el segmento tiene sentido aunque estés mirando un período pasado.
   const refDate = lines.length ? Math.max(...lines.map(l=>l.created)) : now;
-  const freqPerCliente = {};
-  lines.forEach(l=>{
-    const key = l.customer_name || '(sin nombre)';
-    (freqPerCliente[key] = freqPerCliente[key] || new Set()).add(l.order_id);
-  });
   const segmentos = { Nuevo: [], Activo: [], 'En riesgo': [], Inactivo: [] };
+  const segmentoDeCliente = {};
   Object.keys(lastPurchase).forEach(cliente=>{
     const recenciaDias = Math.floor((refDate - lastPurchase[cliente]) / (24*60*60*1000));
-    const freq = freqPerCliente[cliente] ? freqPerCliente[cliente].size : 0;
+    const freq = cliAgg[cliente] ? cliAgg[cliente].orders.size : 0;
     let seg;
     if(recenciaDias <= 30 && freq === 1) seg = 'Nuevo';
     else if(recenciaDias <= 30) seg = 'Activo';
     else if(recenciaDias <= 60) seg = 'En riesgo';
     else seg = 'Inactivo';
-    segmentos[seg].push({ cliente, monto: Math.round(cliAgg[cliente]||0), recenciaDias, freq });
+    segmentoDeCliente[cliente] = seg;
+    segmentos[seg].push({ cliente, monto: Math.round(cliAgg[cliente].monto||0) });
   });
   const cliente_segmentos = Object.entries(segmentos).map(([nombre, arr])=>({
-    nombre,
-    count: arr.length,
-    monto: Math.round(arr.reduce((a,c)=>a+c.monto,0)),
-    clientes: arr.sort((a,b)=>b.monto-a.monto)
+    nombre, count: arr.length, monto: Math.round(arr.reduce((a,c)=>a+c.monto,0))
   }));
 
-  // ---- KPIs resumen ----
+  // ---- ranking completo de clientes (para la tabla) ----
+  const clientes_ranking = cliSorted.map((cliente,i)=>{
+    const monto = cliAgg[cliente].monto;
+    const pedidos = cliAgg[cliente].orders.size;
+    return {
+      rank: i+1,
+      cliente,
+      ventas: Math.round(monto),
+      pct: totalVentasAll ? +(100*monto/totalVentasAll).toFixed(1) : 0,
+      pedidos,
+      ticket: pedidos ? Math.round(monto/pedidos) : 0,
+      ultima_compra: lastPurchase[cliente] ? fmtFecha(lastPurchase[cliente]) : '—',
+      segmento: segmentoDeCliente[cliente] || '—'
+    };
+  });
+
+  // ---- KPIs generales ----
   const kpi_ventas_totales = Math.round(lines.reduce((a,l)=>a+l.monto,0));
   const kpi_ventas_pendientes = Math.round(lines.filter(l=>l.status!=='PAID').reduce((a,l)=>a+l.monto,0));
   const ordersTotals = {};
@@ -1213,131 +1193,62 @@ function buildData(lines, wallet){
   const kpi_ticket_mediana = Math.round(median(orderTotalsArr));
   const kpi_total_clientes = clientes_totales;
 
-  const ordersPerCustomer = {};
-  lines.forEach(l=>{
-    const key = l.customer_name || '(sin nombre)';
-    (ordersPerCustomer[key] = ordersPerCustomer[key] || new Set()).add(l.order_id);
-  });
-  const con1pedido = Object.values(ordersPerCustomer).filter(s=>s.size===1).length;
-  const kpi_pct_1pedido = clientes_totales ? +(100*con1pedido/clientes_totales).toFixed(1) : 0;
-
-  // ---- caja ----
-  const meses_caja = [...new Set(wallet.map(w=>w.period))].sort();
-  const caja_period_labels = meses_caja.map(periodLabelOf);
-  const caja_orden = [], caja_pago = [], caja_interno = [], caja_neto = [];
-  meses_caja.forEach(mes=>{
-    const rows = wallet.filter(w=>w.period===mes);
-    const orden = rows.filter(w=>w.entityType==='ORDER').reduce((a,w)=>a+w.amount,0);
-    const pago = rows.filter(w=>w.entityType==='VENDOR').reduce((a,w)=>a+w.amount,0);
-    const interno = rows.filter(w=>w.entityType==='MOVE').reduce((a,w)=>a+w.amount,0);
-    caja_orden.push(Math.round(orden));
-    caja_pago.push(Math.round(pago));
-    caja_interno.push(Math.round(interno));
-    caja_neto.push(Math.round(orden+pago+interno));
-  });
-  const kpi_cobros_orden = Math.round(wallet.filter(w=>w.entityType==='ORDER').reduce((a,w)=>a+w.amount,0));
+  // ---- egresos (para el KPI, sin categorizar) ----
   const egresosRows = wallet.filter(w=>(w.entityType==='VENDOR' || w.entityType==='MOVE') && w.amount < 0);
   const kpi_total_egresos = Math.round(egresosRows.reduce((a,w)=>a-w.amount,0));
 
-  const gastosAgg = {};
-  egresosRows.forEach(w=>{
-    const cat = categorizeExpense(w.notes);
-    gastosAgg[cat] = (gastosAgg[cat]||0) + Math.abs(w.amount);
+  // ---- detalle de pedidos (incluye cancelados, agrupado por pedido) ----
+  const pedidosMap = {};
+  allLines.forEach(l=>{
+    if(!pedidosMap[l.order_id]){
+      pedidosMap[l.order_id] = {
+        order_id: l.order_id,
+        numero: l.order_number,
+        fecha_ms: l.created,
+        fecha: fmtFecha(l.created),
+        cliente: l.customer_name || '(sin nombre)',
+        condicion: l.condition || '—',
+        estado: l.status,
+        comprobante: (l.invoice && l.invoice !== '0-0') ? l.invoice : '—',
+        notas: l.order_notes || '',
+        monto: 0,
+        items: []
+      };
+    }
+    const p = pedidosMap[l.order_id];
+    p.monto += l.monto;
+    p.items.push((l.quantity||0) + '× ' + l.product_name);
   });
-  const gastos_labels = Object.keys(gastosAgg).sort((a,b)=>gastosAgg[b]-gastosAgg[a]);
-  const gastos_monto = gastos_labels.map(k=>Math.round(gastosAgg[k]));
+  const pedidos_detalle = Object.values(pedidosMap)
+    .map(p=>({ ...p, monto: Math.round(p.monto), productos: p.items.join(', ') }))
+    .sort((a,b)=>b.fecha_ms - a.fecha_ms);
 
-  // ---- rentabilidad (todo el rango filtrado, canal regular) ----
-  const rentLines = lines.filter(l => !isEventoProd(l.product_name) && !isAdjustmentProd(l.product_name));
-  const rentAgg = {};
-  rentLines.forEach(l=>{
-    const key = l.product_name;
-    if(!rentAgg[key]) rentAgg[key] = { ventas:0, costo:0 };
-    const costPerBox = COSTS_PER_BOX[key] || 0;
-    rentAgg[key].ventas += l.monto;
-    rentAgg[key].costo += costPerBox * l.quantity;
-  });
-  const rentLabelsSorted = Object.keys(rentAgg).sort((a,b)=>rentAgg[b].ventas-rentAgg[a].ventas);
-  const rent_prod_labels = rentLabelsSorted;
-  const rent_prod_ventas = rentLabelsSorted.map(k=>Math.round(rentAgg[k].ventas));
-  const rent_prod_costo = rentLabelsSorted.map(k=>Math.round(rentAgg[k].costo));
-  const rent_prod_utilidad = rentLabelsSorted.map((k,i)=>rent_prod_ventas[i]-rent_prod_costo[i]);
-  const rent_prod_margen = rentLabelsSorted.map((k,i)=> rent_prod_ventas[i] ? +(100*rent_prod_utilidad[i]/rent_prod_ventas[i]).toFixed(1) : 0);
-
-  const rankOrder = [...rentLabelsSorted].sort((a,b)=>{
-    const ma = rentAgg[a].ventas ? (rentAgg[a].ventas-rentAgg[a].costo)/rentAgg[a].ventas : 0;
-    const mb = rentAgg[b].ventas ? (rentAgg[b].ventas-rentAgg[b].costo)/rentAgg[b].ventas : 0;
-    return mb-ma;
-  });
-  const rent_rank_labels = rankOrder;
-  const rent_rank_margen = rankOrder.map(k=> rentAgg[k].ventas ? +(100*(rentAgg[k].ventas-rentAgg[k].costo)/rentAgg[k].ventas).toFixed(1) : 0);
-  const rent_rank_utilidad = rankOrder.map(k=> Math.round(rentAgg[k].ventas-rentAgg[k].costo));
-
-  const rent_meses = [...new Set(rentLines.map(l=>l.period))].sort();
-  const rent_period_labels = rent_meses.map(periodLabelOf);
-  const rent_mes_ventas = [], rent_mes_costo = [], rent_mes_utilidad = [], rent_mes_margen = [];
-  rent_meses.forEach(mes=>{
-    const rows = rentLines.filter(l=>l.period===mes);
-    const v = rows.reduce((a,l)=>a+l.monto,0);
-    const c = rows.reduce((a,l)=>a+(COSTS_PER_BOX[l.product_name]||0)*l.quantity,0);
-    rent_mes_ventas.push(Math.round(v));
-    rent_mes_costo.push(Math.round(c));
-    rent_mes_utilidad.push(Math.round(v-c));
-    rent_mes_margen.push(v ? +(100*(v-c)/v).toFixed(1) : 0);
-  });
-  const rent_kpi_ventas = rent_prod_ventas.reduce((a,b)=>a+b,0);
-  const rent_kpi_costo = rent_prod_costo.reduce((a,b)=>a+b,0);
-  const rent_kpi_utilidad = rent_kpi_ventas - rent_kpi_costo;
-  const rent_kpi_margen = rent_kpi_ventas ? +(100*rent_kpi_utilidad/rent_kpi_ventas).toFixed(1) : 0;
-  const rent_kpi_lineas = rentLines.length;
-
-  // ---- margen por cliente (top 10) ----
-  const rentCliAgg = {};
-  rentLines.forEach(l=>{
-    const key = l.customer_name || '(sin nombre)';
-    if(!rentCliAgg[key]) rentCliAgg[key] = { ventas:0, costo:0 };
-    const costPerBox = COSTS_PER_BOX[l.product_name] || 0;
-    rentCliAgg[key].ventas += l.monto;
-    rentCliAgg[key].costo += costPerBox * l.quantity;
-  });
-  const rent_cliente_labels = Object.keys(rentCliAgg).sort((a,b)=>rentCliAgg[b].ventas-rentCliAgg[a].ventas).slice(0,10);
-  const rent_cliente = rent_cliente_labels.map(k=>{
-    const ventas = Math.round(rentCliAgg[k].ventas);
-    const costo = Math.round(rentCliAgg[k].costo);
-    const utilidad = ventas - costo;
-    return { cliente: k, ventas, costo, utilidad, margen: ventas ? +(100*utilidad/ventas).toFixed(1) : 0 };
-  });
-
+  const first = meses[0], last = meses[meses.length-1];
 
   return {
-    meses, period_labels, period_unit_label, periodGranularity,
+    meses, period_labels,
     ventas_regular, ventas_eventos, clientes_activos, pedidos_count, ticket_promedio, mom_growth,
-    productos_labels, productos_monto, productos_unid,
+    evolucion_mensual,
+    productos_labels, productos_monto,
     productos_all_labels, productos_all_monto,
-    trimestres, precio_x3, precio_x6, precio_x12,
-    clientes_labels, clientes_monto, clientes_pct, clientes_pct_acum, clientes_totales, clientes_para_80pct,
-    dormidos_count, dormidos_total, dormidos_lista, cliente_segmentos,
-    meses_caja, caja_period_labels, caja_orden, caja_pago, caja_interno, caja_neto,
-    gastos_labels, gastos_monto,
-    kpi_ventas_totales, kpi_ventas_pendientes, kpi_ticket_promedio, kpi_ticket_mediana, kpi_total_clientes, kpi_total_pedidos,
-    kpi_total_egresos, kpi_cobros_orden, kpi_pct_1pedido,
-    hist_prod_labels, hist_prod_cajas, hist_prod_unidades, hist_prod_prom_cajas, hist_prod_prom_unid,
-    hist_prod_lineas, prom_cajas_general, prom_unid_general, product_movers,
-    trim_evol_labels: trimestres, trim_evol_cajas, trim_evol_unidades, trim_prom_cajas, trim_prom_unidades,
-    cajas_por_producto_mes,
-    rent_prod_labels, rent_prod_ventas, rent_prod_costo, rent_prod_utilidad, rent_prod_margen,
-    rent_rank_labels, rent_rank_margen, rent_rank_utilidad, rent_cliente,
-    rent_meses, rent_period_labels, rent_mes_ventas, rent_mes_costo, rent_mes_utilidad, rent_mes_margen,
-    rent_kpi_ventas, rent_kpi_costo, rent_kpi_utilidad, rent_kpi_margen, rent_kpi_lineas,
-    currentYear, totalClientesConNombre: clientes_totales
+    hist_prod_labels, hist_prod_cajas, hist_prod_unidades, product_movers,
+    clientes_labels, clientes_monto, clientes_pct, clientes_pct_acum, clientes_totales,
+    clientes_ranking, cliente_segmentos,
+    dormidos_count, dormidos_total,
+    kpi_ventas_totales, kpi_ventas_pendientes, kpi_ticket_promedio, kpi_ticket_mediana,
+    kpi_total_clientes, kpi_total_pedidos, kpi_total_egresos,
+    pedidos_detalle,
+    rangoDesde: first ? fmtMes(first) : '-', rangoHasta: last ? fmtMes(last) : '-'
   };
 }
 
 let DATA = null;
 let RAW = null;          // { lines, wallet } sin filtrar, tal cual vino de la base
 let dbSource = null;     // 'dropbox-live' | 'cached-fallback', para el indicador de estado
+let EGRESOS_RAW = null;  // { compras:[...] } normalizado, sin filtrar por fecha
+let EGRESOS_DATA = null; // recalculado en cada aplicación de filtro
 
-/* ---------------- chart plugins (unchanged) ---------------- */
+/* ---------------- chart plugins ---------------- */
 
 const totalLabelsPlugin = {
   id: 'totalLabels',
@@ -1442,8 +1353,11 @@ function resetCanvas(id){
   const err = canvas.parentElement.querySelector('.chart-error');
   if(err) err.style.display = 'none';
 }
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
-// ---------------- KPIs ----------------
+// ---------------- 01 · KPIs ----------------
 function fillKPIs(){
   document.getElementById('kpi-ventas').textContent = fmtARSk(DATA.kpi_ventas_totales);
   const badge = document.getElementById('kpi-ventas-delta');
@@ -1455,24 +1369,31 @@ function fillKPIs(){
     badge.className = 'delta-badge ' + (lastGrowth>=0?'up':'down');
   }
   const pctPend = DATA.kpi_ventas_totales ? Math.round(100*DATA.kpi_ventas_pendientes/DATA.kpi_ventas_totales) : 0;
-  document.getElementById('kpi-ventas-foot').textContent = 'Facturado (pagado + impago) · ' + fmtARSk(DATA.kpi_ventas_pendientes) + ' sin cobrar (' + pctPend + '%)';
+  document.getElementById('kpi-ventas-foot').textContent = 'Incluye pagado + impago, excluye cancelados · variación vs. mes anterior arriba';
+
+  document.getElementById('kpi-pedidos').textContent = DATA.kpi_total_pedidos.toLocaleString('es-AR');
+  document.getElementById('kpi-pedidos-foot').textContent = 'En el período seleccionado, excluye cancelados';
+
+  document.getElementById('kpi-clientes').textContent = DATA.kpi_total_clientes.toLocaleString('es-AR');
+
   document.getElementById('kpi-ticket').textContent = fmtARSk(DATA.kpi_ticket_promedio);
   document.getElementById('kpi-ticket-med').textContent = 'Mediana: ' + fmtARSk(DATA.kpi_ticket_mediana);
-  document.getElementById('kpi-pedcli').textContent = DATA.kpi_total_pedidos + ' / ' + DATA.kpi_total_clientes;
+
+  document.getElementById('kpi-cobros').textContent = fmtARSk(DATA.kpi_ventas_pendientes);
+  document.getElementById('kpi-cobros-foot').textContent = pctPend + '% del total facturado — pedidos IMPAGO o PENDIENTE';
+
   document.getElementById('kpi-dormidos').textContent = DATA.dormidos_count + ' / ' + DATA.dormidos_total;
   document.getElementById('kpi-dormidos-foot').textContent = (DATA.dormidos_total ? Math.round(100*DATA.dormidos_count/DATA.dormidos_total) : 0) + '% de la cartera sin compras hace más de ' + DORMIDO_DIAS + ' días';
-  document.getElementById('kpi-cobros').textContent = fmtARSk(DATA.kpi_ventas_pendientes);
-  document.getElementById('kpi-cobros-foot').textContent = pctPend + '% del total facturado — pedidos marcados IMPAGO o PENDIENTE';
+
   document.getElementById('kpi-egresos').textContent = fmtARSk(DATA.kpi_total_egresos);
 
-  const first = DATA.meses[0], last = DATA.meses[DATA.meses.length-1];
-  document.getElementById('period-range').textContent = (first?fmtMes(first):'-') + ' — ' + (last?fmtMes(last):'-') + ' · nominal';
+  document.getElementById('period-range').textContent = DATA.rangoDesde + ' — ' + DATA.rangoHasta + ' · nominal';
   document.getElementById('resumen-sub').textContent =
-    DATA.kpi_total_pedidos + ' pedidos · ' + DATA.hist_prod_lineas.reduce((a,b)=>a+b,0) + ' líneas · ' +
-    DATA.kpi_total_clientes + ' comercios · ' + DATA.hist_prod_labels.length + ' productos · ' + DATA.meses.length + ' meses de historia';
+    DATA.kpi_total_pedidos + ' pedidos · ' + DATA.kpi_total_clientes + ' comercios · ' +
+    DATA.hist_prod_labels.length + ' productos · ' + DATA.meses.length + ' meses de historia';
 }
 
-/* ---------------- Chart builders (idéntico al diseño original) ---------------- */
+/* ---------------- Chart builders ---------------- */
 
 const charts = {};
 function destroy(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
@@ -1528,57 +1449,38 @@ function initResumen(){
 }
 
 function initVentas(){
-  ['chart-ventas-evol','chart-ventas-ticket','chart-ventas-precio','chart-ventas-crecimiento'].forEach(resetCanvas);
-  ['ventasEvol','ventasTicket','ventasPrecio','ventasCrecimiento'].forEach(destroy);
+  ['chart-ventas-evol','chart-ventas-crecimiento'].forEach(resetCanvas);
+  ['ventasEvol','ventasCrecimiento'].forEach(destroy);
+  clearTable('#tabla-evolucion');
 
   try{
     charts.ventasEvol = barLineVentas('chart-ventas-evol', DATA.period_labels, DATA.ventas_regular, DATA.ventas_eventos);
   }catch(e){ showError('chart-ventas-evol', e.message); }
 
   try{
-    charts.ventasTicket = new Chart(document.getElementById('chart-ventas-ticket'), {
-      type: 'bar',
-      data:{
-        labels: DATA.period_labels,
-        datasets:[
-          { type:'bar', label:'Pedidos', data: DATA.pedidos_count, backgroundColor: PALETTE.sand, borderRadius:3, yAxisID:'y', maxBarThickness: 28 },
-          { type:'line', label:'Ticket promedio', data: DATA.ticket_promedio, borderColor: PALETTE.red, backgroundColor: PALETTE.red, tension:0.3, yAxisID:'y1', pointRadius:3 }
-        ]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{
-          x:{ grid:{display:false} },
-          y:{ position:'left', grid:{color:PALETTE.line}, title:{display:true,text:'Pedidos'}, grace:'15%' },
-          y1:{ position:'right', grid:{display:false}, ticks:{ callback:v=>fmtARSk(v) }, title:{display:true,text:'Ticket'} }
-        },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          totalLabels:{ mode:'perBarVertical', datasetIndex:0, formatter: v=>v.toLocaleString('es-AR') }
-        }
-      }
+    const tbody = document.querySelector('#tabla-evolucion tbody');
+    let totR=0, totE=0, totT=0, totP=0;
+    DATA.evolucion_mensual.forEach(row=>{
+      totR+=row.regular; totE+=row.eventos; totT+=row.total; totP+=row.pedidos;
+      const varTxt = row.variacion===null ? '—' : (row.variacion>=0?'+':'')+row.variacion+'%';
+      const varColor = row.variacion===null ? PALETTE.inkSoft : row.variacion>=0 ? PALETTE.olive : PALETTE.red;
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+row.mes+'</td>'+
+        '<td class="num mono">'+fmtARS(row.regular)+'</td>'+
+        '<td class="num mono">'+fmtARS(row.eventos)+'</td>'+
+        '<td class="num mono">'+fmtARS(row.total)+'</td>'+
+        '<td class="num mono" style="color:'+varColor+'">'+varTxt+'</td>'+
+        '<td class="num mono">'+row.pedidos+'</td>'+
+        '<td class="num mono">'+fmtARS(row.ticket)+'</td>';
+      tbody.appendChild(tr);
     });
-  }catch(e){ showError('chart-ventas-ticket', e.message); }
-
-  try{
-    charts.ventasPrecio = new Chart(document.getElementById('chart-ventas-precio'), {
-      type:'line',
-      data:{
-        labels: DATA.period_labels,
-        datasets:[
-          { label:'Caja x3', data: DATA.precio_x3, borderColor: PALETTE.olive, backgroundColor: PALETTE.olive, tension:0.3, pointRadius:3 },
-          { label:'Caja x6', data: DATA.precio_x6, borderColor: PALETTE.gold, backgroundColor: PALETTE.gold, tension:0.3, pointRadius:3 },
-          { label:'Caja x12', data: DATA.precio_x12, borderColor: PALETTE.red, backgroundColor: PALETTE.red, tension:0.3, pointRadius:3 }
-        ]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        scales:{ x:{grid:{display:false}}, y:{grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}} },
-        plugins:{ legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} } }
-      }
-    });
-  }catch(e){ showError('chart-ventas-precio', e.message); }
+    const trTotal = document.createElement('tr');
+    trTotal.className = 'total-row';
+    trTotal.innerHTML = '<td>Total</td><td class="num mono">'+fmtARS(totR)+'</td><td class="num mono">'+fmtARS(totE)+'</td>'+
+      '<td class="num mono">'+fmtARS(totT)+'</td><td class="num mono">—</td><td class="num mono">'+totP+'</td>'+
+      '<td class="num mono">'+fmtARS(totP?totT/totP:0)+'</td>';
+    tbody.appendChild(trTotal);
+  }catch(e){ console.error('tabla-evolucion', e); }
 
   try{
     const growthColors = DATA.mom_growth.map(v => v===null ? PALETTE.line : v>=0 ? PALETTE.olive : PALETTE.red);
@@ -1603,9 +1505,9 @@ function initVentas(){
 }
 
 function initProductos(){
-  ['chart-prod-donut','chart-hist-cajas','chart-hist-unidades','chart-trim-cajas','chart-trim-unidades','chart-prod-mes'].forEach(resetCanvas);
-  ['prodDonut','histCajas','histUnidades','trimCajas','trimUnidades','prodMes'].forEach(destroy);
-  clearTable('#tabla-productos'); clearTable('#tabla-promedios'); clearTable('#tabla-movers');
+  ['chart-prod-donut','chart-hist-cajas','chart-hist-unidades'].forEach(resetCanvas);
+  ['prodDonut','histCajas','histUnidades'].forEach(destroy);
+  clearTable('#tabla-productos'); clearTable('#tabla-movers');
 
   const colors = [PALETTE.red, PALETTE.redDeep, PALETTE.cacao, PALETTE.olive, PALETTE.gold, PALETTE.sand];
 
@@ -1641,7 +1543,7 @@ function initProductos(){
       const unidades = hi >= 0 ? DATA.hist_prod_unidades[hi].toLocaleString('es-AR') : '—';
       const pct = total ? (100*monto/total).toFixed(1) : '0.0';
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+label+'</td><td class="num mono">'+fmtARS(monto)+'</td><td class="num mono">'+cajas+'</td><td class="num mono">'+unidades+'</td><td class="num mono">'+pct+'%</td>';
+      tr.innerHTML = '<td>'+esc(label)+'</td><td class="num mono">'+fmtARS(monto)+'</td><td class="num mono">'+cajas+'</td><td class="num mono">'+unidades+'</td><td class="num mono">'+pct+'%</td>';
       tbody.appendChild(tr);
     });
     const trTotal = document.createElement('tr');
@@ -1649,11 +1551,6 @@ function initProductos(){
     trTotal.innerHTML = '<td>Total</td><td class="num mono">'+fmtARS(total)+'</td><td class="num mono">'+totalCajas.toLocaleString('es-AR')+'</td><td class="num mono">'+totalUnidades.toLocaleString('es-AR')+'</td><td class="num mono">100%</td>';
     tbody.appendChild(trTotal);
   }catch(e){ console.error('tabla-productos', e); }
-
-  try{
-    document.getElementById('prom-general-txt').textContent =
-      DATA.prom_cajas_general + ' cajas / ' + DATA.prom_unid_general + ' unidades por línea de pedido';
-  }catch(e){ console.error('prom-general-txt', e); }
 
   try{
     charts.histCajas = new Chart(document.getElementById('chart-hist-cajas'), {
@@ -1698,100 +1595,6 @@ function initProductos(){
   }catch(e){ showError('chart-hist-unidades', e.message); }
 
   try{
-    const tbodyP = document.querySelector('#tabla-promedios tbody');
-    const totalLineas = DATA.hist_prod_lineas.reduce((a,b)=>a+b,0);
-    DATA.hist_prod_labels.forEach((label,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+label+'</td><td class="num mono">'+DATA.hist_prod_lineas[i]+'</td><td class="num mono">'+DATA.hist_prod_prom_cajas[i]+'</td><td class="num mono">'+DATA.hist_prod_prom_unid[i]+'</td>';
-      tbodyP.appendChild(tr);
-    });
-    const trTotal = document.createElement('tr');
-    trTotal.className = 'total-row';
-    trTotal.innerHTML = '<td>Total / promedio general</td><td class="num mono">'+totalLineas+'</td><td class="num mono">'+DATA.prom_cajas_general+'</td><td class="num mono">'+DATA.prom_unid_general+'</td>';
-    tbodyP.appendChild(trTotal);
-  }catch(e){ console.error('tabla-promedios', e); }
-
-  try{
-    const prods = ['Caja Alfajores Surtidos X 12','Caja Alfajores Surtidos X 6','Caja Alfajores Surtidos X 3','Alfajor Surtido Unidad'];
-    const prodLabels2 = ['Caja x12','Caja x6','Caja x3','Unidad suelta'];
-    const prodColors2 = [PALETTE.red, PALETTE.redDeep, PALETTE.cacao, PALETTE.olive];
-
-    charts.trimCajas = new Chart(document.getElementById('chart-trim-cajas'), {
-      type:'bar',
-      data:{
-        labels: DATA.trim_evol_labels,
-        datasets: prods.map((p,i)=>({
-          label: prodLabels2[i],
-          data: DATA.trim_evol_cajas[p] || [],
-          backgroundColor: prodColors2[i],
-          borderRadius: 3,
-          maxBarThickness: 40
-        }))
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, grid:{color:PALETTE.line}, grace:'12%' } },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          totalLabels:{ mode:'stackTotal', formatter: v=>v.toLocaleString('es-AR') }
-        }
-      }
-    });
-
-    charts.trimUnidades = new Chart(document.getElementById('chart-trim-unidades'), {
-      type:'bar',
-      data:{
-        labels: DATA.trim_evol_labels,
-        datasets: prods.map((p,i)=>({
-          label: prodLabels2[i],
-          data: DATA.trim_evol_unidades[p] || [],
-          backgroundColor: prodColors2[i],
-          borderRadius: 3,
-          maxBarThickness: 40
-        }))
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, grid:{color:PALETTE.line}, grace:'12%' } },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          totalLabels:{ mode:'stackTotal', formatter: v=>v.toLocaleString('es-AR') }
-        }
-      }
-    });
-  }catch(e){ showError('chart-trim-cajas', e.message); }
-
-  try{
-    const prods = ['Caja Alfajores Surtidos X 12','Caja Alfajores Surtidos X 6','Caja Alfajores Surtidos X 3','Alfajor Surtido Unidad'];
-    const prodLabels = ['Caja x12','Caja x6','Caja x3','Unidad suelta'];
-    const prodColors = [PALETTE.red, PALETTE.redDeep, PALETTE.cacao, PALETTE.olive];
-    charts.prodMes = new Chart(document.getElementById('chart-prod-mes'), {
-      type:'bar',
-      data:{
-        labels: DATA.period_labels,
-        datasets: prods.map((p,i)=>({
-          label: prodLabels[i],
-          data: DATA.cajas_por_producto_mes[p] || [],
-          backgroundColor: prodColors[i],
-          borderRadius: 3,
-          maxBarThickness: 26
-        }))
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{ x:{ stacked:true, grid:{display:false} }, y:{ stacked:true, grid:{color:PALETTE.line}, grace:'14%' } },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          totalLabels:{ mode:'stackTotal', font:"700 9.5px 'Plus Jakarta Sans'", formatter: v=>v.toLocaleString('es-AR') }
-        }
-      }
-    });
-  }catch(e){ showError('chart-prod-mes', e.message); }
-
-  try{
     const caption = document.getElementById('movers-caption');
     if(DATA.product_movers && DATA.product_movers.length){
       const [mPrev, mLast] = DATA.product_movers._meses;
@@ -1804,7 +1607,7 @@ function initProductos(){
         const arrow = m.delta > 0 ? '▲' : m.delta < 0 ? '▼' : '—';
         const color = m.delta > 0 ? PALETTE.olive : m.delta < 0 ? PALETTE.red : PALETTE.inkSoft;
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td>'+m.producto+'</td><td class="num mono">'+m.anterior.toLocaleString('es-AR')+'</td><td class="num mono">'+m.actual.toLocaleString('es-AR')+'</td>'+
+        tr.innerHTML = '<td>'+esc(m.producto)+'</td><td class="num mono">'+m.anterior.toLocaleString('es-AR')+'</td><td class="num mono">'+m.actual.toLocaleString('es-AR')+'</td>'+
           '<td class="num mono" style="color:'+color+'">'+arrow+' '+Math.abs(m.delta).toLocaleString('es-AR')+'</td>'+
           '<td class="num mono" style="color:'+color+'">'+(m.pct>=0?'+':'')+m.pct+'%</td>';
         tbody.appendChild(tr);
@@ -1816,9 +1619,9 @@ function initProductos(){
 }
 
 function initClientes(){
-  ['chart-cli-pareto','chart-cli-activos','chart-cli-segmentos'].forEach(resetCanvas);
-  ['cliPareto','cliActivos','cliSegmentos'].forEach(destroy);
-  clearTable('#tabla-dormidos');
+  ['chart-cli-pareto','chart-cli-segmentos'].forEach(resetCanvas);
+  ['cliPareto','cliSegmentos'].forEach(destroy);
+  clearTable('#tabla-clientes');
 
   try{
     const segColors = { 'Nuevo': PALETTE.gold, 'Activo': PALETTE.olive, 'En riesgo': '#C9873A', 'Inactivo': PALETTE.red };
@@ -1873,83 +1676,96 @@ function initClientes(){
   }catch(e){ showError('chart-cli-pareto', e.message); }
 
   try{
-    charts.cliActivos = new Chart(document.getElementById('chart-cli-activos'), {
-      type:'bar',
-      data:{
-        labels: DATA.period_labels,
-        datasets:[{ label:'Comercios activos', data: DATA.clientes_activos, backgroundColor: PALETTE.cacao, borderRadius:3, maxBarThickness: 30 }]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{ x:{grid:{display:false}}, y:{ grid:{color:PALETTE.line}, beginAtZero:true, grace:'12%' } },
-        plugins:{ legend:{display:false}, totalLabels:{ mode:'perBarVertical', datasetIndex:0, formatter: v=>v.toLocaleString('es-AR') } }
-      }
-    });
-  }catch(e){ showError('chart-cli-activos', e.message); }
-
-  try{
-    document.getElementById('dormidos-caption').textContent =
-      DATA.dormidos_count + ' de ' + DATA.dormidos_total + ' comercios (' + (DATA.dormidos_total?Math.round(100*DATA.dormidos_count/DATA.dormidos_total):0) + '%) sin compras hace más de ' + DORMIDO_DIAS + ' días';
-
-    const tbodyD = document.querySelector('#tabla-dormidos tbody');
-    DATA.dormidos_lista.forEach(d=>{
+    const segColorText = { 'Nuevo': '#7A5E10', 'Activo': PALETTE.olive, 'En riesgo': '#C9873A', 'Inactivo': PALETTE.red };
+    const tbody = document.querySelector('#tabla-clientes tbody');
+    DATA.clientes_ranking.forEach(c=>{
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+d.cliente+'</td><td class="num mono">'+d.ultima_compra+'</td>';
-      tbodyD.appendChild(tr);
+      const segColor = segColorText[c.segmento] || PALETTE.inkSoft;
+      tr.innerHTML = '<td class="mono">'+c.rank+'</td><td>'+esc(c.cliente)+'</td>'+
+        '<td class="num mono">'+fmtARS(c.ventas)+'</td><td class="num mono">'+c.pct+'%</td>'+
+        '<td class="num mono">'+c.pedidos+'</td><td class="num mono">'+fmtARS(c.ticket)+'</td>'+
+        '<td class="mono">'+c.ultima_compra+'</td>'+
+        '<td><span style="color:'+segColor+'; font-weight:700;">'+esc(c.segmento)+'</span></td>';
+      tbody.appendChild(tr);
     });
-    const trTotal = document.createElement('tr');
-    trTotal.className = 'total-row';
-    trTotal.innerHTML = '<td>Total inactivos</td><td class="num mono">'+DATA.dormidos_count+' de '+DATA.dormidos_total+'</td>';
-    tbodyD.appendChild(trTotal);
-  }catch(e){ console.error('tabla-dormidos', e); }
+  }catch(e){ console.error('tabla-clientes', e); }
 }
 
-function initCaja(){
-  ['chart-caja-evol','chart-caja-gastos'].forEach(resetCanvas);
-  ['cajaEvol','cajaGastos'].forEach(destroy);
-  clearTable('#tabla-gastos');
-
+function initPedidos(){
+  clearTable('#tabla-pedidos');
   try{
-    charts.cajaEvol = new Chart(document.getElementById('chart-caja-evol'), {
-      type: 'bar',
-      data:{
-        labels: DATA.caja_period_labels,
-        datasets:[
-          { type:'bar', label:'Orden (cobros)', data: DATA.caja_orden, backgroundColor: PALETTE.olive, borderRadius:3, maxBarThickness: 28 },
-          { type:'bar', label:'Proveedor (egresos)', data: DATA.caja_pago, backgroundColor: PALETTE.red, borderRadius:3, maxBarThickness: 28 },
-          { type:'bar', label:'Interno', data: DATA.caja_interno, backgroundColor: PALETTE.gold, borderRadius:3, maxBarThickness: 28 },
-          { type:'line', label:'Neto', data: DATA.caja_neto, borderColor: PALETTE.cacao, backgroundColor: PALETTE.cacao, tension:0.25, pointRadius:3 }
-        ]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{
-          x:{ stacked:true, grid:{display:false} },
-          y:{ stacked:true, grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}, grace:'14%' }
-        },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          totalLabels:{ mode:'stackTotal', formatter: fmtARSk }
-        }
-      }
+    const tbody = document.querySelector('#tabla-pedidos tbody');
+    DATA.pedidos_detalle.forEach(p=>{
+      const tr = document.createElement('tr');
+      tr.dataset.search = (p.cliente+' '+p.productos+' '+p.numero+' '+p.comprobante).toLowerCase();
+      const stClass = STATUS_CLASS[p.estado] || '';
+      const stLabel = STATUS_LABEL[p.estado] || p.estado;
+      tr.innerHTML = '<td class="mono">'+esc(p.numero)+'</td>'+
+        '<td class="mono">'+p.fecha+'</td>'+
+        '<td>'+esc(p.cliente)+'</td>'+
+        '<td>'+esc(p.productos)+'</td>'+
+        '<td class="num mono">'+fmtARS(p.monto)+'</td>'+
+        '<td>'+esc(p.condicion)+'</td>'+
+        '<td><span class="status-badge '+stClass+'">'+esc(stLabel)+'</span></td>'+
+        '<td class="mono">'+esc(p.comprobante)+'</td>'+
+        '<td>'+esc(p.notas)+'</td>';
+      tbody.appendChild(tr);
     });
-  }catch(e){ showError('chart-caja-evol', e.message); }
+    updatePedidosCount();
+  }catch(e){ console.error('tabla-pedidos', e); }
+}
+
+function updatePedidosCount(){
+  const rows = document.querySelectorAll('#tabla-pedidos tbody tr');
+  let visible = 0;
+  rows.forEach(r=>{ if(r.style.display !== 'none') visible++; });
+  document.getElementById('pedidos-count').textContent = visible.toLocaleString('es-AR') + ' de ' + rows.length.toLocaleString('es-AR') + ' pedidos';
+}
+
+function filterPedidosTable(){
+  const term = document.getElementById('pedidos-search').value.trim().toLowerCase();
+  const rows = document.querySelectorAll('#tabla-pedidos tbody tr');
+  rows.forEach(r=>{
+    r.style.display = (!term || (r.dataset.search||'').includes(term)) ? '' : 'none';
+  });
+  updatePedidosCount();
+}
+
+function initEgresos(){
+  ['chart-egr-categoria','chart-egr-evol'].forEach(resetCanvas);
+  ['egrCategoria','egrEvol'].forEach(destroy);
+  clearTable('#tabla-egresos');
+
+  const warn = document.getElementById('egresos-warn');
+  const content = document.getElementById('egresos-content');
+
+  if(!EGRESOS_DATA){
+    warn.style.display = 'block';
+    content.style.display = 'none';
+    return;
+  }
+  warn.style.display = 'none';
+  content.style.display = '';
+
+  document.getElementById('kpi-egr-total').textContent = fmtARSk(EGRESOS_DATA.kpi_total);
+  document.getElementById('kpi-egr-pendiente').textContent = fmtARSk(EGRESOS_DATA.kpi_pendiente);
+  const pctPend = EGRESOS_DATA.kpi_total ? Math.round(100*EGRESOS_DATA.kpi_pendiente/EGRESOS_DATA.kpi_total) : 0;
+  document.getElementById('kpi-egr-pendiente-foot').textContent = pctPend + '% del total del período sin pagar';
+  document.getElementById('kpi-egr-comprobantes').textContent = EGRESOS_DATA.kpi_comprobantes.toLocaleString('es-AR');
 
   try{
-    const colors2 = [PALETTE.red, PALETTE.cacao, PALETTE.olive, PALETTE.sand, PALETTE.gold, PALETTE.redDeep, '#8A8A7A', '#B7A78F'];
-    charts.cajaGastos = new Chart(document.getElementById('chart-caja-gastos'), {
+    const colors = [PALETTE.red, PALETTE.cacao, PALETTE.olive, PALETTE.gold, PALETTE.redDeep, PALETTE.sand, '#8A8A7A', '#B7A78F'];
+    charts.egrCategoria = new Chart(document.getElementById('chart-egr-categoria'), {
       type:'bar',
       data:{
-        labels: DATA.gastos_labels,
-        datasets:[{ data: DATA.gastos_monto, backgroundColor: colors2, borderRadius:3 }]
+        labels: EGRESOS_DATA.categorias_labels,
+        datasets:[{ data: EGRESOS_DATA.categorias_monto, backgroundColor: colors, borderRadius:3, maxBarThickness: 34 }]
       },
       options:{
         indexAxis:'y',
         responsive:true, maintainAspectRatio:false,
         layout:{ padding:{ right: 62 } },
-        scales:{ x:{ grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}, grace:'18%' }, y:{ grid:{display:false}, ticks:{font:{size:10.5}} } },
+        scales:{ x:{ grid:{color:PALETTE.line}, beginAtZero:true, grace:'18%', ticks:{callback:v=>fmtARSk(v)} }, y:{ grid:{display:false} } },
         plugins:{
           legend:{display:false},
           tooltip:{ callbacks:{ label: ctx => fmtARS(ctx.parsed.x) } },
@@ -1957,137 +1773,61 @@ function initCaja(){
         }
       }
     });
-  }catch(e){ showError('chart-caja-gastos', e.message); }
+  }catch(e){ showError('chart-egr-categoria', e.message); }
 
   try{
-    const totalG = DATA.gastos_monto.reduce((a,b)=>a+b,0);
-    const tbodyG = document.querySelector('#tabla-gastos tbody');
-    DATA.gastos_labels.forEach((label,i)=>{
-      const monto = DATA.gastos_monto[i];
-      const pct = totalG ? (100*monto/totalG).toFixed(1) : '0.0';
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+label+'</td><td class="num mono">'+fmtARS(monto)+'</td><td class="num mono">'+pct+'%</td>';
-      tbodyG.appendChild(tr);
-    });
-    const trTotal = document.createElement('tr');
-    trTotal.className = 'total-row';
-    trTotal.innerHTML = '<td>Total</td><td class="num mono">'+fmtARS(totalG)+'</td><td class="num mono">100%</td>';
-    tbodyG.appendChild(trTotal);
-  }catch(e){ console.error('tabla-gastos', e); }
-}
-
-function initRentabilidad(){
-  ['chart-rent-prod','chart-rent-ranking','chart-rent-evol'].forEach(resetCanvas);
-  ['rentProd','rentRanking','rentEvol'].forEach(destroy);
-  clearTable('#tabla-rentabilidad'); clearTable('#tabla-rent-cliente');
-
-  document.getElementById('rent-sub').textContent = 'Período filtrado · Ventas nominales vs. costo estimado (ver COSTS_PER_BOX en el código)';
-
-  try{
-    document.getElementById('kpi-rent-ventas').textContent = fmtARSk(DATA.rent_kpi_ventas);
-    document.getElementById('kpi-rent-lineas').textContent = DATA.rent_kpi_lineas + ' líneas facturadas en el período';
-    document.getElementById('kpi-rent-costo').textContent = fmtARSk(DATA.rent_kpi_costo);
-    document.getElementById('kpi-rent-utilidad').textContent = fmtARSk(DATA.rent_kpi_utilidad);
-    document.getElementById('kpi-rent-margen').textContent = DATA.rent_kpi_margen + '%';
-  }catch(e){ console.error('kpi-rent', e); }
-
-  try{
-    charts.rentProd = new Chart(document.getElementById('chart-rent-prod'), {
+    charts.egrEvol = new Chart(document.getElementById('chart-egr-evol'), {
       type:'bar',
       data:{
-        labels: DATA.rent_prod_labels,
-        datasets:[
-          { label:'Ventas', data: DATA.rent_prod_ventas, backgroundColor: PALETTE.olive, borderRadius:3, maxBarThickness: 36 },
-          { label:'Costo (estimado)', data: DATA.rent_prod_costo, backgroundColor: PALETTE.sand, borderRadius:3, maxBarThickness: 36 },
-          { label:'Utilidad', data: DATA.rent_prod_utilidad, backgroundColor: PALETTE.red, borderRadius:3, maxBarThickness: 36 }
-        ]
+        labels: EGRESOS_DATA.period_labels,
+        datasets:[{ label:'Egresos', data: EGRESOS_DATA.egresos_mensual, backgroundColor: PALETTE.red, borderRadius:3, maxBarThickness: 34 }]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
         layout:{ padding:{ top: 22 } },
-        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}, grace:'12%' } },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          tooltip:{ callbacks:{ label: ctx => ctx.dataset.label + ': ' + fmtARS(ctx.parsed.y) } },
-          totalLabels:{ mode:'perBarVertical', datasetIndex:0, formatter: fmtARSk }
-        }
+        scales:{ x:{grid:{display:false}}, y:{ grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}, grace:'12%' } },
+        plugins:{ legend:{display:false}, totalLabels:{ mode:'perBarVertical', datasetIndex:0, formatter: fmtARSk } }
       }
     });
-  }catch(e){ showError('chart-rent-prod', e.message); }
+  }catch(e){ showError('chart-egr-evol', e.message); }
 
   try{
-    charts.rentRanking = new Chart(document.getElementById('chart-rent-ranking'), {
-      type:'bar',
-      data:{
-        labels: DATA.rent_rank_labels,
-        datasets:[{ label:'Margen %', data: DATA.rent_rank_margen, backgroundColor: PALETTE.red, borderRadius:3, maxBarThickness: 32 }]
-      },
-      options:{
-        indexAxis:'y',
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ right: 46 } },
-        scales:{ x:{ grid:{color:PALETTE.line}, beginAtZero:true, grace:'18%', ticks:{callback:v=>v+'%'} }, y:{ grid:{display:false}, ticks:{font:{size:10.5}} } },
-        plugins:{
-          legend:{display:false},
-          tooltip:{ callbacks:{ label: ctx => ctx.parsed.x + '% de margen' } },
-          totalLabels:{ mode:'horizontalEnd', datasetIndex:0, formatter: v=>v+'%' }
-        }
-      }
-    });
-  }catch(e){ showError('chart-rent-ranking', e.message); }
-
-  try{
-    const totalV = DATA.rent_prod_ventas.reduce((a,b)=>a+b,0);
-    const totalC = DATA.rent_prod_costo.reduce((a,b)=>a+b,0);
-    const totalU = DATA.rent_prod_utilidad.reduce((a,b)=>a+b,0);
-    const tbody = document.querySelector('#tabla-rentabilidad tbody');
-    DATA.rent_prod_labels.forEach((label,i)=>{
+    const tbody = document.querySelector('#tabla-egresos tbody');
+    EGRESOS_DATA.detalle.forEach(r=>{
       const tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+label+'</td><td class="num mono">'+fmtARS(DATA.rent_prod_ventas[i])+'</td><td class="num mono">'+fmtARS(DATA.rent_prod_costo[i])+'</td><td class="num mono">'+fmtARS(DATA.rent_prod_utilidad[i])+'</td><td class="num mono">'+DATA.rent_prod_margen[i]+'%</td>';
+      tr.dataset.search = (r.proveedor+' '+r.tipo+' '+r.subconcepto+' '+r.comprobante).toLowerCase();
+      const stClass = EGR_STATUS_CLASS[r.estado] || '';
+      tr.innerHTML = '<td class="mono">'+(r.fechaMs!==null ? fmtFecha(r.fechaMs) : '—')+'</td>'+
+        '<td>'+esc(r.proveedor)+'</td>'+
+        '<td>'+esc(r.tipo)+'</td>'+
+        '<td>'+esc(r.subconcepto)+'</td>'+
+        '<td class="num mono">'+fmtARS(r.total)+'</td>'+
+        '<td class="mono">'+esc(r.comprobante)+'</td>'+
+        '<td><span class="status-badge '+stClass+'">'+esc(r.estado)+'</span></td>'+
+        '<td>'+esc(r.observaciones)+'</td>';
       tbody.appendChild(tr);
     });
-    const trTotal = document.createElement('tr');
-    trTotal.className = 'total-row';
-    trTotal.innerHTML = '<td>Total</td><td class="num mono">'+fmtARS(totalV)+'</td><td class="num mono">'+fmtARS(totalC)+'</td><td class="num mono">'+fmtARS(totalU)+'</td><td class="num mono">'+DATA.rent_kpi_margen+'%</td>';
-    tbody.appendChild(trTotal);
-  }catch(e){ console.error('tabla-rentabilidad', e); }
-
-  try{
-    charts.rentEvol = new Chart(document.getElementById('chart-rent-evol'), {
-      data:{
-        labels: DATA.rent_period_labels,
-        datasets:[
-          { type:'bar', label:'Utilidad', data: DATA.rent_mes_utilidad, backgroundColor: PALETTE.red, borderRadius:3, yAxisID:'y', maxBarThickness: 40 },
-          { type:'line', label:'Margen %', data: DATA.rent_mes_margen, borderColor: PALETTE.cacao, backgroundColor: PALETTE.cacao, tension:0.25, yAxisID:'y1', pointRadius:3 }
-        ]
-      },
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        layout:{ padding:{ top: 22 } },
-        scales:{
-          x:{ grid:{display:false} },
-          y:{ position:'left', grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}, title:{display:true,text:'Utilidad'}, grace:'15%' },
-          y1:{ position:'right', grid:{display:false}, min:0, max:100, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Margen %'} }
-        },
-        plugins:{
-          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
-          totalLabels:{ mode:'perBarVertical', datasetIndex:0, formatter: fmtARSk }
-        }
-      }
-    });
-  }catch(e){ showError('chart-rent-evol', e.message); }
-
-  try{
-    const tbodyRC = document.querySelector('#tabla-rent-cliente tbody');
-    DATA.rent_cliente.forEach(c=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = '<td>'+c.cliente+'</td><td class="num mono">'+fmtARS(c.ventas)+'</td><td class="num mono">'+fmtARS(c.costo)+'</td><td class="num mono">'+fmtARS(c.utilidad)+'</td><td class="num mono">'+c.margen+'%</td>';
-      tbodyRC.appendChild(tr);
-    });
-  }catch(e){ console.error('tabla-rent-cliente', e); }
+    updateEgresosCount();
+  }catch(e){ console.error('tabla-egresos', e); }
 }
 
-const initFns = { resumen: initResumen, ventas: initVentas, productos: initProductos, clientes: initClientes, caja: initCaja, rentabilidad: initRentabilidad };
+function updateEgresosCount(){
+  const rows = document.querySelectorAll('#tabla-egresos tbody tr');
+  let visible = 0;
+  rows.forEach(r=>{ if(r.style.display !== 'none') visible++; });
+  document.getElementById('egresos-count').textContent = visible.toLocaleString('es-AR') + ' de ' + rows.length.toLocaleString('es-AR') + ' comprobantes';
+}
+
+function filterEgresosTable(){
+  const term = document.getElementById('egresos-search').value.trim().toLowerCase();
+  const rows = document.querySelectorAll('#tabla-egresos tbody tr');
+  rows.forEach(r=>{
+    r.style.display = (!term || (r.dataset.search||'').includes(term)) ? '' : 'none';
+  });
+  updateEgresosCount();
+}
+
+const initFns = { resumen: initResumen, ventas: initVentas, productos: initProductos, clientes: initClientes, pedidos: initPedidos, egresos: initEgresos };
 
 function renderAll(){
   Object.values(initFns).forEach(fn => fn());
@@ -2096,15 +1836,6 @@ function renderAll(){
 function activateTab(tab){
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === tab); });
   document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
-}
-
-/* ---------------- boot / refresh ---------------- */
-
-function setLiveStatus(state, label){
-  const dot = document.getElementById('live-dot');
-  const lbl = document.getElementById('live-label');
-  dot.className = 'live-dot' + (state==='err' ? ' err' : state==='stale' ? ' stale' : '');
-  lbl.textContent = label;
 }
 
 /* ---------------- filtro de fecha ---------------- */
@@ -2130,15 +1861,15 @@ function applyFilterAndRender(){
 
   const { lines, wallet } = filterByDate(RAW.lines, RAW.wallet, fromMs, toMs);
   DATA = buildData(lines, wallet);
+  EGRESOS_DATA = buildEgresosData(EGRESOS_RAW, fromMs, toMs);
   fillKPIs();
   renderAll();
 
   const status = document.getElementById('filtro-status');
-  const granInfo = ' · gráficos agrupados por ' + DATA.period_unit_label;
   if(!fromMs && !toMs){
-    status.textContent = 'Mostrando todo el historial' + granInfo;
+    status.textContent = 'Mostrando todo el historial · agrupado por mes';
   } else {
-    status.textContent = DATA.kpi_total_pedidos + ' pedidos en el rango seleccionado' + granInfo;
+    status.textContent = DATA.kpi_total_pedidos + ' pedidos en el rango seleccionado · agrupado por mes';
   }
 }
 
@@ -2167,8 +1898,9 @@ async function refresh(showFullLoader){
   btn.disabled = true;
   if(showFullLoader) document.getElementById('loading-screen').classList.remove('hidden');
   try{
-    const { source, dbErr } = await loadDatabase();
+    const [{ source, dbErr }, egresosResult] = await Promise.all([ loadDatabase(), loadEgresos() ]);
     dbSource = source;
+    EGRESOS_RAW = egresosResult ? egresosResult.raw : null;
     setLoading('Calculando métricas…');
     RAW = queryRaw();
     setupFilterBounds();
@@ -2210,6 +1942,8 @@ function boot(){
     document.getElementById('filtro-hasta').value = '';
     applyFilterAndRender();
   });
+  document.getElementById('pedidos-search').addEventListener('input', filterPedidosTable);
+  document.getElementById('egresos-search').addEventListener('input', filterEgresosTable);
   activateTab('resumen');
   refresh(true);
   setInterval(function(){ refresh(false); }, REFRESH_MS);
