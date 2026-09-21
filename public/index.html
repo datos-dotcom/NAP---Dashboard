@@ -503,6 +503,36 @@ footer{
   color: var(--ink-soft);
   white-space: nowrap;
 }
+
+/* ---------- sortable tables ---------- */
+.sortable-th{ cursor: pointer; user-select: none; }
+.sortable-th:hover{ color: var(--ink); }
+.sortable-th.sorted-asc::after{ content: ' ▲'; font-size: 0.65em; }
+.sortable-th.sorted-desc::after{ content: ' ▼'; font-size: 0.65em; }
+
+/* ---------- filas resaltadas / atenuadas (gráficos y tablas de evolución) ---------- */
+tr.row-muted td{ color: var(--ink-soft); opacity: 0.5; }
+tr.row-highlight td{ font-weight: 800; }
+.range-note{
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: -6px 0 16px 0;
+}
+
+/* ---------- etiquetas de segmento (clientes) ---------- */
+.tag{
+  display:inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.tag.nuevo{ background: rgba(201,162,39,0.15); color: #7A5E10; }
+.tag.activo{ background: rgba(110,127,74,0.15); color: var(--olive); }
+.tag.riesgo{ background: rgba(201,135,58,0.15); color: #9C5F22; }
+.tag.inactivo{ background: rgba(203,20,38,0.10); color: var(--red); }
 </style>
 </head>
 <body>
@@ -528,12 +558,13 @@ footer{
     </div>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" data-tab="resumen"><span class="tab-num">01</span>KPIs generales</button>
+    <button class="tab-btn active" data-tab="resumen"><span class="tab-num">01</span>Resumen</button>
     <button class="tab-btn" data-tab="ventas"><span class="tab-num">02</span>Evolución de ventas</button>
     <button class="tab-btn" data-tab="productos"><span class="tab-num">03</span>Productos</button>
-    <button class="tab-btn" data-tab="clientes"><span class="tab-num">04</span>Top clientes</button>
+    <button class="tab-btn" data-tab="clientes"><span class="tab-num">04</span>Clientes</button>
     <button class="tab-btn" data-tab="pedidos"><span class="tab-num">05</span>Detalle de pedidos</button>
     <button class="tab-btn" data-tab="egresos"><span class="tab-num">06</span>Egresos</button>
+    <button class="tab-btn" data-tab="resultado"><span class="tab-num">07</span>Resultado</button>
   </div>
   <div class="filter-bar">
     <label class="filter-field">
@@ -553,61 +584,47 @@ footer{
 <main>
   <div class="noscript-banner" id="error-banner">No se pudieron cargar los gráficos. Revisá la consola del navegador para más detalle.</div>
 
-  <!-- ============ 01 · KPIs GENERALES ============ -->
+  <!-- ============ 01 · RESUMEN ============ -->
   <section class="panel active" id="panel-resumen">
-    <div class="section-title">KPIs generales</div>
+    <div class="section-title">Resumen</div>
     <div class="section-sub" id="resumen-sub">-</div>
 
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">Total vendido (facturado)</div>
         <div class="kpi-value-row">
-          <div class="kpi-value" id="kpi-ventas">-</div>
-          <span class="delta-badge" id="kpi-ventas-delta"></span>
+          <div class="kpi-value" id="kpi-sum-ventas">-</div>
+          <span class="delta-badge" id="kpi-sum-ventas-delta"></span>
         </div>
-        <div class="kpi-foot" id="kpi-ventas-foot">Incluye pagado + impago, excluye pedidos cancelados</div>
+        <div class="kpi-foot">En el período seleccionado · más detalle en Evolución de ventas</div>
+      </div>
+      <div class="kpi-card" id="kpi-sum-resultado-card">
+        <div class="kpi-label">Resultado neto</div>
+        <div class="kpi-value small" id="kpi-sum-resultado">-</div>
+        <div class="kpi-foot">Ventas − Egresos · más detalle en Resultado</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Cantidad de pedidos</div>
-        <div class="kpi-value" id="kpi-pedidos">-</div>
-        <div class="kpi-foot" id="kpi-pedidos-foot">-</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Cantidad de clientes</div>
-        <div class="kpi-value" id="kpi-clientes">-</div>
-        <div class="kpi-foot" id="kpi-clientes-foot">Comercios distintos con al menos 1 pedido en el período</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Venta promedio (ticket)</div>
-        <div class="kpi-value small" id="kpi-ticket">-</div>
-        <div class="kpi-foot" id="kpi-ticket-med">-</div>
-      </div>
-      <div class="kpi-card warn">
-        <div class="kpi-label">Pendiente de cobro</div>
-        <div class="kpi-value small" id="kpi-cobros">-</div>
-        <div class="kpi-foot" id="kpi-cobros-foot">-</div>
+        <div class="kpi-label">Clientes activos</div>
+        <div class="kpi-value" id="kpi-sum-clientes">-</div>
+        <div class="kpi-foot">Comercios con al menos 1 pedido en el período</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Clientes inactivos</div>
-        <div class="kpi-value" id="kpi-dormidos">-</div>
-        <div class="kpi-foot" id="kpi-dormidos-foot">-</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Egresos registrados</div>
-        <div class="kpi-value small" id="kpi-egresos">-</div>
-        <div class="kpi-foot">Pagos a proveedores + movimientos internos negativos en caja</div>
+        <div class="kpi-value" id="kpi-sum-dormidos">-</div>
+        <div class="kpi-foot">Histórico completo (no cambia con el filtro) · detalle en Clientes</div>
       </div>
     </div>
 
     <div class="grid-1 card">
       <div class="card-title">Ventas mensuales — canal regular vs. eventos</div>
-      <div class="card-caption">Pesos nominales · apilado</div>
+      <div class="card-caption">Pesos nominales · apilado · siempre muestra todo el historial</div>
+      <div class="range-note">El rango que elegiste arriba queda resaltado; el resto del historial se ve atenuado, para no perder el contexto.</div>
       <div class="chart-wrap h-320"><canvas id="chart-resumen-ventas"></canvas><div class="chart-error"></div></div>
     </div>
 
     <div class="grid-1 card">
       <div class="card-title">Comercios activos por mes</div>
-      <div class="card-caption">Clientes distintos con al menos 1 pedido facturado</div>
+      <div class="card-caption">Clientes distintos con al menos 1 pedido facturado · siempre muestra todo el historial</div>
       <div class="chart-wrap h-320"><canvas id="chart-resumen-clientes"></canvas><div class="chart-error"></div></div>
     </div>
   </section>
@@ -617,20 +634,43 @@ footer{
     <div class="section-title">Evolución de ventas</div>
     <div class="section-sub">Por mes · canal regular vs. eventos · pesos nominales (sin ajuste por inflación)</div>
 
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total vendido</div>
+        <div class="kpi-value-row">
+          <div class="kpi-value" id="kpi-vt-ventas">-</div>
+          <span class="delta-badge" id="kpi-vt-ventas-delta"></span>
+        </div>
+        <div class="kpi-foot">Incluye pagado + impago, excluye cancelados · en el período seleccionado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Cantidad de pedidos</div>
+        <div class="kpi-value" id="kpi-vt-pedidos">-</div>
+        <div class="kpi-foot">En el período seleccionado, excluye cancelados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Venta promedio (ticket)</div>
+        <div class="kpi-value small" id="kpi-vt-ticket">-</div>
+        <div class="kpi-foot" id="kpi-vt-ticket-med">-</div>
+      </div>
+    </div>
+
     <div class="grid-1 card">
       <div class="card-title">Ventas mensuales — canal regular vs. eventos</div>
-      <div class="card-caption">Pesos nominales · apilado</div>
+      <div class="card-caption">Pesos nominales · apilado · siempre muestra todo el historial</div>
+      <div class="range-note">El rango seleccionado queda resaltado; el resto se atenúa para mantener el contexto.</div>
       <div class="chart-wrap h-360"><canvas id="chart-ventas-evol"></canvas><div class="chart-error"></div></div>
     </div>
 
     <div class="grid-1 card">
       <div class="card-title">Tabla de evolución mensual</div>
-      <div class="card-caption">Venta regular vs. eventos, variación contra el mes anterior, pedidos y ticket promedio</div>
+      <div class="card-caption">Venta regular vs. eventos, variación contra el mes anterior, pedidos y ticket promedio · hacé clic en un encabezado para ordenar</div>
+      <div class="range-note">Filas en negrita = dentro del rango filtrado. El total de abajo suma solo esas filas.</div>
       <div class="scroll-table">
       <table id="tabla-evolucion">
         <thead><tr>
-          <th>Mes</th><th class="num">Venta regular</th><th class="num">Venta eventos</th><th class="num">Total</th>
-          <th class="num">Var. % vs. mes ant.</th><th class="num">Pedidos</th><th class="num">Ticket prom.</th>
+          <th class="sortable-th">Mes</th><th class="num sortable-th">Venta regular</th><th class="num sortable-th">Venta eventos</th><th class="num sortable-th">Total</th>
+          <th class="num sortable-th">Var. % vs. mes ant.</th><th class="num sortable-th">Pedidos</th><th class="num sortable-th">Ticket prom.</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -639,7 +679,7 @@ footer{
 
     <div class="grid-1 card">
       <div class="card-title">Crecimiento mes a mes</div>
-      <div class="card-caption">Variación % de ventas totales (regular + eventos) vs. el mes anterior</div>
+      <div class="card-caption">Variación % de ventas totales (regular + eventos) vs. el mes anterior · siempre muestra todo el historial</div>
       <div class="chart-wrap h-280"><canvas id="chart-ventas-crecimiento"></canvas><div class="chart-error"></div></div>
     </div>
   </section>
@@ -660,7 +700,7 @@ footer{
       <div class="card-caption">Monto, cajas y unidades reales (cajas × formato) — todas las líneas facturadas</div>
       <div class="scroll-table">
       <table id="tabla-productos">
-        <thead><tr><th>Producto</th><th class="num">Monto</th><th class="num">Cajas</th><th class="num">Unidades</th><th class="num">% del monto</th></tr></thead>
+        <thead><tr><th class="sortable-th">Producto</th><th class="num sortable-th">Monto</th><th class="num sortable-th">Cajas</th><th class="num sortable-th">Unidades</th><th class="num sortable-th">% del monto</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
@@ -683,17 +723,31 @@ footer{
       <div class="card-caption" id="movers-caption">Cajas vendidas, mayor variación absoluta primero</div>
       <div class="scroll-table">
       <table id="tabla-movers">
-        <thead><tr><th>Producto</th><th class="num">Mes anterior</th><th class="num">Último mes</th><th class="num">Variación</th><th class="num">%</th></tr></thead>
+        <thead><tr><th class="sortable-th">Producto</th><th class="num sortable-th">Mes anterior</th><th class="num sortable-th">Último mes</th><th class="num sortable-th">Variación</th><th class="num sortable-th">%</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
     </div>
   </section>
 
-  <!-- ============ 04 · TOP CLIENTES ============ -->
+  <!-- ============ 04 · CLIENTES ============ -->
   <section class="panel" id="panel-clientes">
-    <div class="section-title">Top clientes</div>
+    <div class="section-title">Clientes</div>
     <div class="section-sub">Concentración, actividad y ranking completo de la cartera</div>
+    <div class="warn-banner">Esta pestaña siempre muestra el <strong>historial completo</strong> de cada cliente, sin importar el filtro de fecha de arriba — la fecha de última compra y el estado de actividad necesitan ver todo el historial para ser correctos.</div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Cantidad de clientes</div>
+        <div class="kpi-value" id="kpi-cli-total">-</div>
+        <div class="kpi-foot">Comercios distintos, histórico completo</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="kpi-label">Clientes inactivos / en riesgo</div>
+        <div class="kpi-value" id="kpi-cli-inactivos">-</div>
+        <div class="kpi-foot" id="kpi-cli-inactivos-foot">-</div>
+      </div>
+    </div>
 
     <div class="grid-1 card">
       <div class="card-title">Segmentación por actividad</div>
@@ -708,13 +762,35 @@ footer{
     </div>
 
     <div class="grid-1 card">
+      <div class="card-title">Clientes inactivos y en riesgo</div>
+      <div class="card-caption">Dejaron de comprar hace 31 días o más · ordenado por días sin comprar (los más urgentes primero) · esta es la lista para reactivar</div>
+      <div class="search-row">
+        <input type="text" class="search-box" id="inactivos-search" placeholder="Buscar cliente…">
+        <span class="search-count" id="inactivos-count">-</span>
+      </div>
+      <div class="scroll-table tall">
+      <table id="tabla-inactivos">
+        <thead><tr>
+          <th class="sortable-th">Cliente</th><th class="num sortable-th">Pedidos totales</th><th class="num sortable-th">Ventas históricas</th>
+          <th class="sortable-th">Última compra</th><th class="num sortable-th">Días sin comprar</th><th class="sortable-th">Etiqueta</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="grid-1 card">
       <div class="card-title">Ranking completo de clientes</div>
       <div class="card-caption">Ordenado por ventas totales · incluye pedidos, ticket promedio, última compra y segmento</div>
+      <div class="search-row">
+        <input type="text" class="search-box" id="clientes-search" placeholder="Buscar cliente…">
+        <span class="search-count" id="clientes-count">-</span>
+      </div>
       <div class="scroll-table tall">
       <table id="tabla-clientes">
         <thead><tr>
-          <th>#</th><th>Cliente</th><th class="num">Ventas</th><th class="num">% del total</th>
-          <th class="num">Pedidos</th><th class="num">Ticket prom.</th><th>Última compra</th><th>Segmento</th>
+          <th class="sortable-th">#</th><th class="sortable-th">Cliente</th><th class="num sortable-th">Ventas</th><th class="num sortable-th">% del total</th>
+          <th class="num sortable-th">Pedidos</th><th class="num sortable-th">Ticket prom.</th><th class="sortable-th">Última compra</th><th class="sortable-th">Segmento</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -727,6 +803,14 @@ footer{
     <div class="section-title">Detalle de pedidos</div>
     <div class="section-sub">Todo el detalle disponible por pedido, incluye cancelados · orden: más reciente primero</div>
 
+    <div class="kpi-grid">
+      <div class="kpi-card warn">
+        <div class="kpi-label">Pendiente de cobro</div>
+        <div class="kpi-value small" id="kpi-ped-pendiente">-</div>
+        <div class="kpi-foot" id="kpi-ped-pendiente-foot">-</div>
+      </div>
+    </div>
+
     <div class="grid-1 card">
       <div class="search-row">
         <input type="text" class="search-box" id="pedidos-search" placeholder="Buscar por cliente, producto, N° de pedido o comprobante…">
@@ -735,8 +819,8 @@ footer{
       <div class="scroll-table tall">
       <table id="tabla-pedidos">
         <thead><tr>
-          <th>N°</th><th>Fecha</th><th>Cliente</th><th>Productos</th><th class="num">Monto</th>
-          <th>Condición</th><th>Estado</th><th>Comprobante</th><th>Notas</th>
+          <th class="sortable-th">N°</th><th class="sortable-th">Fecha</th><th class="sortable-th">Cliente</th><th class="sortable-th">Productos</th><th class="num sortable-th">Monto</th>
+          <th class="sortable-th">Condición</th><th class="sortable-th">Estado</th><th class="sortable-th">Comprobante</th><th class="sortable-th">Notas</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -778,7 +862,8 @@ footer{
 
       <div class="grid-1 card">
         <div class="card-title">Evolución mensual de egresos</div>
-        <div class="card-caption">Monto total por mes</div>
+        <div class="card-caption">Monto total por mes · siempre muestra todo el historial</div>
+        <div class="range-note">El rango seleccionado queda resaltado; el resto se atenúa para mantener el contexto.</div>
         <div class="chart-wrap h-320"><canvas id="chart-egr-evol"></canvas><div class="chart-error"></div></div>
       </div>
 
@@ -790,12 +875,62 @@ footer{
         <div class="scroll-table tall">
         <table id="tabla-egresos">
           <thead><tr>
-            <th>Fecha</th><th>Proveedor</th><th>Tipo</th><th>Subconcepto</th><th class="num">Monto</th>
-            <th>Comprobante</th><th>Estado de pago</th><th>Observaciones</th>
+            <th class="sortable-th">Fecha</th><th class="sortable-th">Proveedor</th><th class="sortable-th">Tipo</th><th class="sortable-th">Subconcepto</th><th class="num sortable-th">Monto</th>
+            <th class="sortable-th">Comprobante</th><th class="sortable-th">Estado de pago</th><th class="sortable-th">Observaciones</th>
           </tr></thead>
           <tbody></tbody>
         </table>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 07 · RESULTADO ============ -->
+  <section class="panel" id="panel-resultado">
+    <div class="section-title">Resultado</div>
+    <div class="section-sub">Ventas (Dropbox) vs. egresos (Google Sheets) · pesos nominales</div>
+
+    <div class="warn-banner" id="resultado-warn" style="display:none;">Los egresos todavía no están conectados, así que el resultado de abajo muestra solo las ventas, sin descontar gastos. En cuanto la pestaña Egresos cargue datos, este resultado se va a completar solo.</div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card good">
+        <div class="kpi-label">Ventas totales</div>
+        <div class="kpi-value small" id="kpi-res-ventas">-</div>
+        <div class="kpi-foot">En el período seleccionado</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Egresos totales</div>
+        <div class="kpi-value small" id="kpi-res-egresos">-</div>
+        <div class="kpi-foot">Según la planilla de Compras</div>
+      </div>
+      <div class="kpi-card" id="kpi-res-resultado-card">
+        <div class="kpi-label">Resultado neto</div>
+        <div class="kpi-value small" id="kpi-res-resultado">-</div>
+        <div class="kpi-foot">Ventas − Egresos</div>
+      </div>
+      <div class="kpi-card" id="kpi-res-margen-card">
+        <div class="kpi-label">Margen sobre ventas</div>
+        <div class="kpi-value" id="kpi-res-margen">-</div>
+        <div class="kpi-foot">Resultado / Ventas</div>
+      </div>
+    </div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Ventas, egresos y resultado por mes</div>
+      <div class="card-caption">Barras: ventas y egresos · línea: resultado neto · siempre muestra todo el historial</div>
+      <div class="range-note">El rango seleccionado queda resaltado; el resto se atenúa para mantener el contexto.</div>
+      <div class="chart-wrap h-360"><canvas id="chart-resultado"></canvas><div class="chart-error"></div></div>
+    </div>
+
+    <div class="grid-1 card">
+      <div class="card-title">Tabla de resultado mensual</div>
+      <div class="card-caption">Ventas, egresos, resultado neto y margen % sobre ventas, mes a mes</div>
+      <div class="range-note">Filas en negrita = dentro del rango filtrado. El total de abajo suma solo esas filas.</div>
+      <div class="scroll-table">
+      <table id="tabla-resultado">
+        <thead><tr><th class="sortable-th">Mes</th><th class="num sortable-th">Ventas</th><th class="num sortable-th">Egresos</th><th class="num sortable-th">Resultado</th><th class="num sortable-th">Margen %</th></tr></thead>
+        <tbody></tbody>
+      </table>
       </div>
     </div>
   </section>
@@ -926,6 +1061,31 @@ function normalizeEgresos(payload){
   return { compras };
 }
 
+// Combina las ventas (DATA, viene de la base sqlite/Dropbox) con los egresos
+// (EGRESOS_DATA, viene de la planilla) mes a mes. Si EGRESOS_DATA todavía no
+// está disponible, trata los egresos de ese mes como 0 (el resultado queda
+// igual a las ventas hasta que la conexión de egresos funcione).
+function buildResultado(data, egresosData){
+  const ventasPorMes = {};
+  data.meses.forEach((m,i)=>{ ventasPorMes[m] = (data.ventas_regular[i]||0) + (data.ventas_eventos[i]||0); });
+  const egresosPorMes = {};
+  if(egresosData){ egresosData.meses.forEach((m,i)=>{ egresosPorMes[m] = egresosData.egresos_mensual[i]||0; }); }
+
+  const meses = [...new Set([...data.meses, ...(egresosData ? egresosData.meses : [])])].sort();
+  const period_labels = meses.map(fmtMes);
+  const ventas = meses.map(m=>Math.round(ventasPorMes[m]||0));
+  const egresos = meses.map(m=>Math.round(egresosPorMes[m]||0));
+  const resultado = meses.map((m,i)=>ventas[i]-egresos[i]);
+  const margen = meses.map((m,i)=> ventas[i] ? +(100*resultado[i]/ventas[i]).toFixed(1) : null);
+
+  const kpi_ventas = ventas.reduce((a,b)=>a+b,0);
+  const kpi_egresos = egresos.reduce((a,b)=>a+b,0);
+  const kpi_resultado = kpi_ventas - kpi_egresos;
+  const kpi_margen = kpi_ventas ? +(100*kpi_resultado/kpi_ventas).toFixed(1) : 0;
+
+  return { meses, period_labels, ventas, egresos, resultado, margen, kpi_ventas, kpi_egresos, kpi_resultado, kpi_margen };
+}
+
 const EGR_STATUS_CLASS = { 'Pagado':'paid', 'Parcial':'parcial', 'Pendiente':'unpaid' };
 
 function buildEgresosData(raw, fromMs, toMs){
@@ -992,6 +1152,90 @@ function median(arr){
 }
 function isEventoProd(name){ return name === 'Alfajor Unidad Eventos'; }
 function isAdjustmentProd(name){ return /descuento|cambio/i.test(name || ''); }
+
+// ---- helpers para "resaltar el rango seleccionado sin perder el contexto" ----
+function withAlpha(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return 'rgba('+r+','+g+','+b+','+alpha+')';
+}
+function monthBounds(monthKey){
+  const [y,m] = monthKey.split('-').map(Number);
+  return [ Date.UTC(y, m-1, 1, 0,0,0,0), Date.UTC(y, m, 0, 23,59,59,999) ];
+}
+// true si el mes tiene alguna intersección con [fromMs,toMs] (null = sin límite)
+function monthInRange(monthKey, fromMs, toMs){
+  if(fromMs===null && toMs===null) return true;
+  const [s,e] = monthBounds(monthKey);
+  const lo = fromMs===null ? -Infinity : fromMs;
+  const hi = toMs===null ? Infinity : toMs;
+  return e>=lo && s<=hi;
+}
+// devuelve, para cada mes de "meses", el color base a full opacidad si está
+// dentro del rango filtrado, o atenuado (25%) si quedó fuera — así el gráfico
+// nunca pierde el contexto del resto del historial.
+function highlightColors(meses, baseHex, fromMs, toMs){
+  return meses.map(m => monthInRange(m, fromMs, toMs) ? baseHex : withAlpha(baseHex, 0.22));
+}
+
+// ---- tablas ordenables (clic en un encabezado) ----
+const tableSortState = {};
+function cellSortValue(td){
+  const raw = (td.textContent || '').trim();
+  const numTxt = raw.replace(/[^0-9,.\-]/g,'').replace(/\./g,'').replace(',', '.');
+  const num = parseFloat(numTxt);
+  if(!isNaN(num) && /[0-9]/.test(raw)) return num;
+  return raw.toLowerCase();
+}
+function applySort(tableId, colIndex, dir){
+  const table = document.getElementById(tableId);
+  if(!table) return;
+  const tbody = table.querySelector('tbody');
+  const allRows = Array.from(tbody.querySelectorAll('tr'));
+  const totalRows = allRows.filter(r=>r.classList.contains('total-row'));
+  const dataRows = allRows.filter(r=>!r.classList.contains('total-row'));
+  dataRows.sort((a,b)=>{
+    const va = cellSortValue(a.children[colIndex]);
+    const vb = cellSortValue(b.children[colIndex]);
+    const cmp = (typeof va==='number' && typeof vb==='number') ? va-vb : String(va).localeCompare(String(vb),'es');
+    return dir==='asc' ? cmp : -cmp;
+  });
+  dataRows.forEach(r=>tbody.appendChild(r));
+  totalRows.forEach(r=>tbody.appendChild(r));
+  table.querySelectorAll('thead th').forEach((h,i)=>{
+    h.classList.remove('sorted-asc','sorted-desc');
+    if(i===colIndex) h.classList.add(dir==='asc' ? 'sorted-asc' : 'sorted-desc');
+  });
+  tableSortState[tableId] = { colIndex, dir };
+}
+function makeSortable(tableId){
+  const table = document.getElementById(tableId);
+  if(!table || table.dataset.sortableBound) return;
+  table.dataset.sortableBound = '1';
+  table.querySelectorAll('thead th').forEach((th, colIndex)=>{
+    th.addEventListener('click', ()=>{
+      const state = tableSortState[tableId];
+      const dir = (state && state.colIndex===colIndex && state.dir==='asc') ? 'desc' : 'asc';
+      applySort(tableId, colIndex, dir);
+    });
+  });
+}
+function reapplySortIfAny(tableId){
+  const state = tableSortState[tableId];
+  if(state) applySort(tableId, state.colIndex, state.dir);
+}
+function makeTextFilterable(inputId, tableId, countId, countLabel){
+  const input = document.getElementById(inputId);
+  const rows = document.querySelectorAll('#'+tableId+' tbody tr');
+  const term = input.value.trim().toLowerCase();
+  let visible = 0;
+  rows.forEach(r=>{
+    const match = !term || (r.dataset.search||'').includes(term);
+    r.style.display = match ? '' : 'none';
+    if(match) visible++;
+  });
+  if(countId) document.getElementById(countId).textContent = visible.toLocaleString('es-AR') + ' de ' + rows.length.toLocaleString('es-AR') + ' ' + countLabel;
+}
 
 const STATUS_LABEL = { PAID:'Pagado', UNPAID:'Impago', PENDING:'Pendiente', CANCELED:'Cancelado' };
 const STATUS_CLASS = { PAID:'paid', UNPAID:'unpaid', PENDING:'pending', CANCELED:'canceled' };
@@ -1148,7 +1392,7 @@ function buildData(allLines, wallet){
   const dormidos_count = dormidosArr.length;
   const dormidos_total = clientes_totales;
 
-  const refDate = lines.length ? Math.max(...lines.map(l=>l.created)) : now;
+  const refDate = now;
   const segmentos = { Nuevo: [], Activo: [], 'En riesgo': [], Inactivo: [] };
   const segmentoDeCliente = {};
   Object.keys(lastPurchase).forEach(cliente=>{
@@ -1170,6 +1414,7 @@ function buildData(allLines, wallet){
   const clientes_ranking = cliSorted.map((cliente,i)=>{
     const monto = cliAgg[cliente].monto;
     const pedidos = cliAgg[cliente].orders.size;
+    const ultimaMs = lastPurchase[cliente] || null;
     return {
       rank: i+1,
       cliente,
@@ -1177,7 +1422,9 @@ function buildData(allLines, wallet){
       pct: totalVentasAll ? +(100*monto/totalVentasAll).toFixed(1) : 0,
       pedidos,
       ticket: pedidos ? Math.round(monto/pedidos) : 0,
-      ultima_compra: lastPurchase[cliente] ? fmtFecha(lastPurchase[cliente]) : '—',
+      ultima_compra: ultimaMs ? fmtFecha(ultimaMs) : '—',
+      ultima_compra_ms: ultimaMs,
+      dias_sin_comprar: ultimaMs ? Math.floor((now - ultimaMs)/(24*60*60*1000)) : null,
       segmento: segmentoDeCliente[cliente] || '—'
     };
   });
@@ -1243,10 +1490,15 @@ function buildData(allLines, wallet){
 }
 
 let DATA = null;
+let DATA_ALL = null;     // igual que DATA pero SIN el filtro de fecha — para gráficos/tablas de evolución que siempre muestran todo el historial
 let RAW = null;          // { lines, wallet } sin filtrar, tal cual vino de la base
 let dbSource = null;     // 'dropbox-live' | 'cached-fallback', para el indicador de estado
 let EGRESOS_RAW = null;  // { compras:[...] } normalizado, sin filtrar por fecha
 let EGRESOS_DATA = null; // recalculado en cada aplicación de filtro
+let EGRESOS_ALL = null;  // igual que EGRESOS_DATA pero sin filtro de fecha
+let RESULTADO_DATA = null; // cruce de DATA (ventas) + EGRESOS_DATA (egresos) por mes
+let RESULTADO_ALL = null;  // igual que RESULTADO_DATA pero sin filtro de fecha
+let currentFromMs = null, currentToMs = null; // rango de fecha elegido actualmente (para resaltar en los gráficos de contexto completo)
 
 /* ---------------- chart plugins ---------------- */
 
@@ -1357,40 +1609,56 @@ function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-// ---------------- 01 · KPIs ----------------
+// ---------------- KPIs, repartidos por pestaña ----------------
 function fillKPIs(){
-  document.getElementById('kpi-ventas').textContent = fmtARSk(DATA.kpi_ventas_totales);
-  const badge = document.getElementById('kpi-ventas-delta');
+  // -- 01 Resumen (ejecutivo) --
+  document.getElementById('kpi-sum-ventas').textContent = fmtARSk(DATA.kpi_ventas_totales);
+  const badgeSum = document.getElementById('kpi-sum-ventas-delta');
   const lastGrowth = DATA.mom_growth.length ? DATA.mom_growth[DATA.mom_growth.length-1] : null;
   if(lastGrowth === null){
-    badge.textContent = ''; badge.className = 'delta-badge';
+    badgeSum.textContent = ''; badgeSum.className = 'delta-badge';
   } else {
-    badge.textContent = (lastGrowth>=0?'▲ +':'▼ ') + lastGrowth + '%';
-    badge.className = 'delta-badge ' + (lastGrowth>=0?'up':'down');
+    badgeSum.textContent = (lastGrowth>=0?'▲ +':'▼ ') + lastGrowth + '%';
+    badgeSum.className = 'delta-badge ' + (lastGrowth>=0?'up':'down');
   }
-  const pctPend = DATA.kpi_ventas_totales ? Math.round(100*DATA.kpi_ventas_pendientes/DATA.kpi_ventas_totales) : 0;
-  document.getElementById('kpi-ventas-foot').textContent = 'Incluye pagado + impago, excluye cancelados · variación vs. mes anterior arriba';
-
-  document.getElementById('kpi-pedidos').textContent = DATA.kpi_total_pedidos.toLocaleString('es-AR');
-  document.getElementById('kpi-pedidos-foot').textContent = 'En el período seleccionado, excluye cancelados';
-
-  document.getElementById('kpi-clientes').textContent = DATA.kpi_total_clientes.toLocaleString('es-AR');
-
-  document.getElementById('kpi-ticket').textContent = fmtARSk(DATA.kpi_ticket_promedio);
-  document.getElementById('kpi-ticket-med').textContent = 'Mediana: ' + fmtARSk(DATA.kpi_ticket_mediana);
-
-  document.getElementById('kpi-cobros').textContent = fmtARSk(DATA.kpi_ventas_pendientes);
-  document.getElementById('kpi-cobros-foot').textContent = pctPend + '% del total facturado — pedidos IMPAGO o PENDIENTE';
-
-  document.getElementById('kpi-dormidos').textContent = DATA.dormidos_count + ' / ' + DATA.dormidos_total;
-  document.getElementById('kpi-dormidos-foot').textContent = (DATA.dormidos_total ? Math.round(100*DATA.dormidos_count/DATA.dormidos_total) : 0) + '% de la cartera sin compras hace más de ' + DORMIDO_DIAS + ' días';
-
-  document.getElementById('kpi-egresos').textContent = fmtARSk(DATA.kpi_total_egresos);
+  document.getElementById('kpi-sum-resultado').textContent = fmtARSk(RESULTADO_DATA.kpi_resultado);
+  document.getElementById('kpi-sum-resultado-card').className = 'kpi-card ' + (RESULTADO_DATA.kpi_resultado>=0 ? 'good' : '');
+  document.getElementById('kpi-sum-clientes').textContent = DATA.kpi_total_clientes.toLocaleString('es-AR');
+  const sumSegRiesgo = DATA_ALL.cliente_segmentos.find(s=>s.nombre==='En riesgo');
+  const sumSegInactivo = DATA_ALL.cliente_segmentos.find(s=>s.nombre==='Inactivo');
+  document.getElementById('kpi-sum-dormidos').textContent = (sumSegRiesgo?sumSegRiesgo.count:0) + (sumSegInactivo?sumSegInactivo.count:0);
 
   document.getElementById('period-range').textContent = DATA.rangoDesde + ' — ' + DATA.rangoHasta + ' · nominal';
   document.getElementById('resumen-sub').textContent =
     DATA.kpi_total_pedidos + ' pedidos · ' + DATA.kpi_total_clientes + ' comercios · ' +
-    DATA.hist_prod_labels.length + ' productos · ' + DATA.meses.length + ' meses de historia';
+    DATA.hist_prod_labels.length + ' productos · ' + DATA.meses.length + ' meses en el período seleccionado';
+
+  // -- 02 Evolución de ventas --
+  document.getElementById('kpi-vt-ventas').textContent = fmtARSk(DATA.kpi_ventas_totales);
+  const badgeVt = document.getElementById('kpi-vt-ventas-delta');
+  if(lastGrowth === null){
+    badgeVt.textContent = ''; badgeVt.className = 'delta-badge';
+  } else {
+    badgeVt.textContent = (lastGrowth>=0?'▲ +':'▼ ') + lastGrowth + '%';
+    badgeVt.className = 'delta-badge ' + (lastGrowth>=0?'up':'down');
+  }
+  document.getElementById('kpi-vt-pedidos').textContent = DATA.kpi_total_pedidos.toLocaleString('es-AR');
+  document.getElementById('kpi-vt-ticket').textContent = fmtARSk(DATA.kpi_ticket_promedio);
+  document.getElementById('kpi-vt-ticket-med').textContent = 'Mediana: ' + fmtARSk(DATA.kpi_ticket_mediana);
+
+  // -- 04 Clientes (siempre histórico completo, DATA_ALL) --
+  document.getElementById('kpi-cli-total').textContent = DATA_ALL.kpi_total_clientes.toLocaleString('es-AR');
+  const segRiesgo = DATA_ALL.cliente_segmentos.find(s=>s.nombre==='En riesgo');
+  const segInactivo = DATA_ALL.cliente_segmentos.find(s=>s.nombre==='Inactivo');
+  const inactivosYriesgo = (segRiesgo?segRiesgo.count:0) + (segInactivo?segInactivo.count:0);
+  document.getElementById('kpi-cli-inactivos').textContent = inactivosYriesgo.toLocaleString('es-AR');
+  document.getElementById('kpi-cli-inactivos-foot').textContent =
+    (DATA_ALL.kpi_total_clientes ? Math.round(100*inactivosYriesgo/DATA_ALL.kpi_total_clientes) : 0) + '% de la cartera sin comprar hace más de 30 días (En riesgo + Inactivo) · detalle abajo';
+
+  // -- 05 Detalle de pedidos --
+  document.getElementById('kpi-ped-pendiente').textContent = fmtARSk(DATA.kpi_ventas_pendientes);
+  const pctPend = DATA.kpi_ventas_totales ? Math.round(100*DATA.kpi_ventas_pendientes/DATA.kpi_ventas_totales) : 0;
+  document.getElementById('kpi-ped-pendiente-foot').textContent = pctPend + '% del total facturado en el período — pedidos IMPAGO o PENDIENTE';
 }
 
 /* ---------------- Chart builders ---------------- */
@@ -1398,14 +1666,16 @@ function fillKPIs(){
 const charts = {};
 function destroy(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
 
-function barLineVentas(canvasId, labels, regular, eventos){
+function barLineVentas(canvasId, labels, regular, eventos, meses, fromMs, toMs){
+  const colorRegular = meses ? highlightColors(meses, PALETTE.red, fromMs, toMs) : PALETTE.red;
+  const colorEventos = meses ? highlightColors(meses, PALETTE.gold, fromMs, toMs) : PALETTE.gold;
   return new Chart(document.getElementById(canvasId), {
     type: 'bar',
     data: {
       labels: labels,
       datasets: [
-        { type:'bar', label:'Canal regular', data: regular, backgroundColor: PALETTE.red, borderRadius: 3, maxBarThickness: 34 },
-        { type:'bar', label:'Eventos', data: eventos, backgroundColor: PALETTE.gold, borderRadius: 3, maxBarThickness: 34 }
+        { type:'bar', label:'Canal regular', data: regular, backgroundColor: colorRegular, borderRadius: 3, maxBarThickness: 34 },
+        { type:'bar', label:'Eventos', data: eventos, backgroundColor: colorEventos, borderRadius: 3, maxBarThickness: 34 }
       ]
     },
     options: {
@@ -1428,15 +1698,16 @@ function initResumen(){
   resetCanvas('chart-resumen-ventas'); resetCanvas('chart-resumen-clientes');
   destroy('resumenVentas'); destroy('resumenClientes');
   try{
-    charts.resumenVentas = barLineVentas('chart-resumen-ventas', DATA.period_labels, DATA.ventas_regular, DATA.ventas_eventos);
+    charts.resumenVentas = barLineVentas('chart-resumen-ventas', DATA_ALL.period_labels, DATA_ALL.ventas_regular, DATA_ALL.ventas_eventos, DATA_ALL.meses, currentFromMs, currentToMs);
   }catch(e){ showError('chart-resumen-ventas', e.message); }
 
   try{
+    const colorClientes = highlightColors(DATA_ALL.meses, PALETTE.cacao, currentFromMs, currentToMs);
     charts.resumenClientes = new Chart(document.getElementById('chart-resumen-clientes'), {
       type:'bar',
       data:{
-        labels: DATA.period_labels,
-        datasets:[{ label:'Comercios activos', data: DATA.clientes_activos, backgroundColor: PALETTE.cacao, borderRadius:3, maxBarThickness: 30 }]
+        labels: DATA_ALL.period_labels,
+        datasets:[{ label:'Comercios activos', data: DATA_ALL.clientes_activos, backgroundColor: colorClientes, borderRadius:3, maxBarThickness: 30 }]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
@@ -1454,17 +1725,17 @@ function initVentas(){
   clearTable('#tabla-evolucion');
 
   try{
-    charts.ventasEvol = barLineVentas('chart-ventas-evol', DATA.period_labels, DATA.ventas_regular, DATA.ventas_eventos);
+    charts.ventasEvol = barLineVentas('chart-ventas-evol', DATA_ALL.period_labels, DATA_ALL.ventas_regular, DATA_ALL.ventas_eventos, DATA_ALL.meses, currentFromMs, currentToMs);
   }catch(e){ showError('chart-ventas-evol', e.message); }
 
   try{
     const tbody = document.querySelector('#tabla-evolucion tbody');
-    let totR=0, totE=0, totT=0, totP=0;
-    DATA.evolucion_mensual.forEach(row=>{
-      totR+=row.regular; totE+=row.eventos; totT+=row.total; totP+=row.pedidos;
+    DATA_ALL.evolucion_mensual.forEach((row,i)=>{
+      const inRange = monthInRange(DATA_ALL.meses[i], currentFromMs, currentToMs);
       const varTxt = row.variacion===null ? '—' : (row.variacion>=0?'+':'')+row.variacion+'%';
       const varColor = row.variacion===null ? PALETTE.inkSoft : row.variacion>=0 ? PALETTE.olive : PALETTE.red;
       const tr = document.createElement('tr');
+      tr.className = inRange ? 'row-highlight' : 'row-muted';
       tr.innerHTML = '<td>'+row.mes+'</td>'+
         '<td class="num mono">'+fmtARS(row.regular)+'</td>'+
         '<td class="num mono">'+fmtARS(row.eventos)+'</td>'+
@@ -1474,21 +1745,27 @@ function initVentas(){
         '<td class="num mono">'+fmtARS(row.ticket)+'</td>';
       tbody.appendChild(tr);
     });
+    // El total refleja solo el rango filtrado (DATA), no todo el historial.
+    let totR=0, totE=0, totT=0, totP=0;
+    DATA.evolucion_mensual.forEach(row=>{ totR+=row.regular; totE+=row.eventos; totT+=row.total; totP+=row.pedidos; });
     const trTotal = document.createElement('tr');
     trTotal.className = 'total-row';
-    trTotal.innerHTML = '<td>Total</td><td class="num mono">'+fmtARS(totR)+'</td><td class="num mono">'+fmtARS(totE)+'</td>'+
+    trTotal.innerHTML = '<td>Total (rango filtrado)</td><td class="num mono">'+fmtARS(totR)+'</td><td class="num mono">'+fmtARS(totE)+'</td>'+
       '<td class="num mono">'+fmtARS(totT)+'</td><td class="num mono">—</td><td class="num mono">'+totP+'</td>'+
       '<td class="num mono">'+fmtARS(totP?totT/totP:0)+'</td>';
     tbody.appendChild(trTotal);
+    makeSortable('tabla-evolucion');
+    reapplySortIfAny('tabla-evolucion');
   }catch(e){ console.error('tabla-evolucion', e); }
 
   try{
-    const growthColors = DATA.mom_growth.map(v => v===null ? PALETTE.line : v>=0 ? PALETTE.olive : PALETTE.red);
+    const growthColorsBase = DATA_ALL.mom_growth.map(v => v===null ? PALETTE.line : v>=0 ? PALETTE.olive : PALETTE.red);
+    const growthColors = DATA_ALL.meses.map((m,i) => monthInRange(m, currentFromMs, currentToMs) ? growthColorsBase[i] : withAlpha(growthColorsBase[i], 0.22));
     charts.ventasCrecimiento = new Chart(document.getElementById('chart-ventas-crecimiento'), {
       type:'bar',
       data:{
-        labels: DATA.period_labels,
-        datasets:[{ label:'Crecimiento %', data: DATA.mom_growth, backgroundColor: growthColors, borderRadius:3, maxBarThickness: 28 }]
+        labels: DATA_ALL.period_labels,
+        datasets:[{ label:'Crecimiento %', data: DATA_ALL.mom_growth, backgroundColor: growthColors, borderRadius:3, maxBarThickness: 28 }]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
@@ -1550,6 +1827,8 @@ function initProductos(){
     trTotal.className = 'total-row';
     trTotal.innerHTML = '<td>Total</td><td class="num mono">'+fmtARS(total)+'</td><td class="num mono">'+totalCajas.toLocaleString('es-AR')+'</td><td class="num mono">'+totalUnidades.toLocaleString('es-AR')+'</td><td class="num mono">100%</td>';
     tbody.appendChild(trTotal);
+    makeSortable('tabla-productos');
+    reapplySortIfAny('tabla-productos');
   }catch(e){ console.error('tabla-productos', e); }
 
   try{
@@ -1612,20 +1891,30 @@ function initProductos(){
           '<td class="num mono" style="color:'+color+'">'+(m.pct>=0?'+':'')+m.pct+'%</td>';
         tbody.appendChild(tr);
       });
+      makeSortable('tabla-movers');
+      reapplySortIfAny('tabla-movers');
     } else {
       caption.textContent = 'No hay suficientes meses en el rango seleccionado para comparar.';
     }
   }catch(e){ console.error('tabla-movers', e); }
 }
 
+const SEG_TAG_CLASS = { 'Nuevo':'nuevo', 'Activo':'activo', 'En riesgo':'riesgo', 'Inactivo':'inactivo' };
+
 function initClientes(){
   ['chart-cli-pareto','chart-cli-segmentos'].forEach(resetCanvas);
   ['cliPareto','cliSegmentos'].forEach(destroy);
-  clearTable('#tabla-clientes');
+  clearTable('#tabla-clientes'); clearTable('#tabla-inactivos');
+
+  // Esta pestaña ignora el filtro de fecha global a propósito: usa siempre
+  // DATA_ALL (historial completo), porque "última compra" y "cliente
+  // inactivo" son preguntas de recencia que no tienen sentido acotadas a
+  // una ventana de fechas arbitraria.
+  const D = DATA_ALL;
 
   try{
     const segColors = { 'Nuevo': PALETTE.gold, 'Activo': PALETTE.olive, 'En riesgo': '#C9873A', 'Inactivo': PALETTE.red };
-    const segs = DATA.cliente_segmentos;
+    const segs = D.cliente_segmentos;
     charts.cliSegmentos = new Chart(document.getElementById('chart-cli-segmentos'), {
       type:'bar',
       data:{
@@ -1653,10 +1942,10 @@ function initClientes(){
     charts.cliPareto = new Chart(document.getElementById('chart-cli-pareto'), {
       type: 'bar',
       data:{
-        labels: DATA.clientes_labels,
+        labels: D.clientes_labels,
         datasets:[
-          { type:'bar', label:'% individual', data: DATA.clientes_pct, backgroundColor: PALETTE.red, borderRadius:3, yAxisID:'y' },
-          { type:'line', label:'% acumulado', data: DATA.clientes_pct_acum, borderColor: PALETTE.cacao, backgroundColor: PALETTE.cacao, tension:0.25, yAxisID:'y1', pointRadius:3 }
+          { type:'bar', label:'% individual', data: D.clientes_pct, backgroundColor: PALETTE.red, borderRadius:3, yAxisID:'y' },
+          { type:'line', label:'% acumulado', data: D.clientes_pct_acum, borderColor: PALETTE.cacao, backgroundColor: PALETTE.cacao, tension:0.25, yAxisID:'y1', pointRadius:3 }
         ]
       },
       options:{
@@ -1675,19 +1964,46 @@ function initClientes(){
     });
   }catch(e){ showError('chart-cli-pareto', e.message); }
 
+  // ---- tabla: clientes inactivos y en riesgo (la lista para reactivar) ----
   try{
-    const segColorText = { 'Nuevo': '#7A5E10', 'Activo': PALETTE.olive, 'En riesgo': '#C9873A', 'Inactivo': PALETTE.red };
-    const tbody = document.querySelector('#tabla-clientes tbody');
-    DATA.clientes_ranking.forEach(c=>{
+    const tbodyI = document.querySelector('#tabla-inactivos tbody');
+    const inactivos = D.clientes_ranking
+      .filter(c => c.segmento === 'En riesgo' || c.segmento === 'Inactivo')
+      .sort((a,b)=> (b.dias_sin_comprar||0) - (a.dias_sin_comprar||0));
+    inactivos.forEach(c=>{
       const tr = document.createElement('tr');
-      const segColor = segColorText[c.segmento] || PALETTE.inkSoft;
+      tr.dataset.search = c.cliente.toLowerCase();
+      const tagClass = SEG_TAG_CLASS[c.segmento] || '';
+      tr.innerHTML = '<td>'+esc(c.cliente)+'</td>'+
+        '<td class="num mono">'+c.pedidos+'</td>'+
+        '<td class="num mono">'+fmtARS(c.ventas)+'</td>'+
+        '<td class="mono">'+c.ultima_compra+'</td>'+
+        '<td class="num mono">'+(c.dias_sin_comprar!==null ? c.dias_sin_comprar : '—')+'</td>'+
+        '<td><span class="tag '+tagClass+'">'+esc(c.segmento)+'</span></td>';
+      tbodyI.appendChild(tr);
+    });
+    makeTextFilterable('inactivos-search', 'tabla-inactivos', 'inactivos-count', 'clientes');
+    makeSortable('tabla-inactivos');
+    reapplySortIfAny('tabla-inactivos');
+  }catch(e){ console.error('tabla-inactivos', e); }
+
+  // ---- tabla: ranking completo ----
+  try{
+    const tbody = document.querySelector('#tabla-clientes tbody');
+    D.clientes_ranking.forEach(c=>{
+      const tr = document.createElement('tr');
+      tr.dataset.search = c.cliente.toLowerCase();
+      const tagClass = SEG_TAG_CLASS[c.segmento] || '';
       tr.innerHTML = '<td class="mono">'+c.rank+'</td><td>'+esc(c.cliente)+'</td>'+
         '<td class="num mono">'+fmtARS(c.ventas)+'</td><td class="num mono">'+c.pct+'%</td>'+
         '<td class="num mono">'+c.pedidos+'</td><td class="num mono">'+fmtARS(c.ticket)+'</td>'+
         '<td class="mono">'+c.ultima_compra+'</td>'+
-        '<td><span style="color:'+segColor+'; font-weight:700;">'+esc(c.segmento)+'</span></td>';
+        '<td><span class="tag '+tagClass+'">'+esc(c.segmento)+'</span></td>';
       tbody.appendChild(tr);
     });
+    makeTextFilterable('clientes-search', 'tabla-clientes', 'clientes-count', 'clientes');
+    makeSortable('tabla-clientes');
+    reapplySortIfAny('tabla-clientes');
   }catch(e){ console.error('tabla-clientes', e); }
 }
 
@@ -1712,6 +2028,8 @@ function initPedidos(){
       tbody.appendChild(tr);
     });
     updatePedidosCount();
+    makeSortable('tabla-pedidos');
+    reapplySortIfAny('tabla-pedidos');
   }catch(e){ console.error('tabla-pedidos', e); }
 }
 
@@ -1776,11 +2094,12 @@ function initEgresos(){
   }catch(e){ showError('chart-egr-categoria', e.message); }
 
   try{
+    const colorEgr = EGRESOS_ALL ? highlightColors(EGRESOS_ALL.meses, PALETTE.red, currentFromMs, currentToMs) : PALETTE.red;
     charts.egrEvol = new Chart(document.getElementById('chart-egr-evol'), {
       type:'bar',
       data:{
-        labels: EGRESOS_DATA.period_labels,
-        datasets:[{ label:'Egresos', data: EGRESOS_DATA.egresos_mensual, backgroundColor: PALETTE.red, borderRadius:3, maxBarThickness: 34 }]
+        labels: EGRESOS_ALL.period_labels,
+        datasets:[{ label:'Egresos', data: EGRESOS_ALL.egresos_mensual, backgroundColor: colorEgr, borderRadius:3, maxBarThickness: 34 }]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
@@ -1808,6 +2127,8 @@ function initEgresos(){
       tbody.appendChild(tr);
     });
     updateEgresosCount();
+    makeSortable('tabla-egresos');
+    reapplySortIfAny('tabla-egresos');
   }catch(e){ console.error('tabla-egresos', e); }
 }
 
@@ -1827,7 +2148,80 @@ function filterEgresosTable(){
   updateEgresosCount();
 }
 
-const initFns = { resumen: initResumen, ventas: initVentas, productos: initProductos, clientes: initClientes, pedidos: initPedidos, egresos: initEgresos };
+function initResultado(){
+  resetCanvas('chart-resultado');
+  destroy('resultado');
+  clearTable('#tabla-resultado');
+
+  document.getElementById('resultado-warn').style.display = EGRESOS_DATA ? 'none' : 'block';
+
+  const R = RESULTADO_DATA;
+  document.getElementById('kpi-res-ventas').textContent = fmtARSk(R.kpi_ventas);
+  document.getElementById('kpi-res-egresos').textContent = fmtARSk(R.kpi_egresos);
+  const resEl = document.getElementById('kpi-res-resultado');
+  resEl.textContent = fmtARSk(R.kpi_resultado);
+  resEl.style.color = R.kpi_resultado >= 0 ? PALETTE.olive : PALETTE.red;
+  document.getElementById('kpi-res-resultado-card').className = 'kpi-card ' + (R.kpi_resultado >= 0 ? 'good' : '');
+  const margenEl = document.getElementById('kpi-res-margen');
+  margenEl.textContent = R.kpi_margen + '%';
+  margenEl.style.color = R.kpi_margen >= 0 ? PALETTE.olive : PALETTE.red;
+  document.getElementById('kpi-res-margen-card').className = 'kpi-card ' + (R.kpi_margen >= 0 ? 'good' : '');
+
+  try{
+    const colorVentas = highlightColors(RESULTADO_ALL.meses, PALETTE.olive, currentFromMs, currentToMs);
+    const colorEgresos = highlightColors(RESULTADO_ALL.meses, PALETTE.red, currentFromMs, currentToMs);
+    charts.resultado = new Chart(document.getElementById('chart-resultado'), {
+      data:{
+        labels: RESULTADO_ALL.period_labels,
+        datasets:[
+          { type:'bar', label:'Ventas', data: RESULTADO_ALL.ventas, backgroundColor: colorVentas, borderRadius:3, yAxisID:'y', maxBarThickness: 30 },
+          { type:'bar', label:'Egresos', data: RESULTADO_ALL.egresos, backgroundColor: colorEgresos, borderRadius:3, yAxisID:'y', maxBarThickness: 30 },
+          { type:'line', label:'Resultado', data: RESULTADO_ALL.resultado, borderColor: PALETTE.cacao, backgroundColor: PALETTE.cacao, tension:0.25, yAxisID:'y', pointRadius:3 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ top: 22 } },
+        scales:{
+          x:{ grid:{display:false} },
+          y:{ grid:{color:PALETTE.line}, ticks:{callback:v=>fmtARSk(v)}, grace:'15%' }
+        },
+        plugins:{
+          legend:{ position:'bottom', labels:{boxWidth:10,boxHeight:10,usePointStyle:true} },
+          tooltip:{ callbacks:{ label: ctx => ctx.dataset.label + ': ' + fmtARS(ctx.parsed.y) } }
+        }
+      }
+    });
+  }catch(e){ showError('chart-resultado', e.message); }
+
+  try{
+    const tbody = document.querySelector('#tabla-resultado tbody');
+    RESULTADO_ALL.meses.forEach((m,i)=>{
+      const inRange = monthInRange(m, currentFromMs, currentToMs);
+      const color = RESULTADO_ALL.resultado[i] >= 0 ? PALETTE.olive : PALETTE.red;
+      const margenTxt = RESULTADO_ALL.margen[i] === null ? '—' : RESULTADO_ALL.margen[i] + '%';
+      const tr = document.createElement('tr');
+      tr.className = inRange ? 'row-highlight' : 'row-muted';
+      tr.innerHTML = '<td>'+RESULTADO_ALL.period_labels[i]+'</td>'+
+        '<td class="num mono">'+fmtARS(RESULTADO_ALL.ventas[i])+'</td>'+
+        '<td class="num mono">'+fmtARS(RESULTADO_ALL.egresos[i])+'</td>'+
+        '<td class="num mono" style="color:'+color+'">'+fmtARS(RESULTADO_ALL.resultado[i])+'</td>'+
+        '<td class="num mono" style="color:'+color+'">'+margenTxt+'</td>';
+      tbody.appendChild(tr);
+    });
+    const trTotal = document.createElement('tr');
+    trTotal.className = 'total-row';
+    const colorTotal = R.kpi_resultado >= 0 ? PALETTE.olive : PALETTE.red;
+    trTotal.innerHTML = '<td>Total (rango filtrado)</td><td class="num mono">'+fmtARS(R.kpi_ventas)+'</td><td class="num mono">'+fmtARS(R.kpi_egresos)+'</td>'+
+      '<td class="num mono" style="color:'+colorTotal+'">'+fmtARS(R.kpi_resultado)+'</td>'+
+      '<td class="num mono" style="color:'+colorTotal+'">'+R.kpi_margen+'%</td>';
+    tbody.appendChild(trTotal);
+    makeSortable('tabla-resultado');
+    reapplySortIfAny('tabla-resultado');
+  }catch(e){ console.error('tabla-resultado', e); }
+}
+
+const initFns = { resumen: initResumen, ventas: initVentas, productos: initProductos, clientes: initClientes, pedidos: initPedidos, egresos: initEgresos, resultado: initResultado };
 
 function renderAll(){
   Object.values(initFns).forEach(fn => fn());
@@ -1862,6 +2256,8 @@ function applyFilterAndRender(){
   const { lines, wallet } = filterByDate(RAW.lines, RAW.wallet, fromMs, toMs);
   DATA = buildData(lines, wallet);
   EGRESOS_DATA = buildEgresosData(EGRESOS_RAW, fromMs, toMs);
+  RESULTADO_DATA = buildResultado(DATA, EGRESOS_DATA);
+  currentFromMs = fromMs; currentToMs = toMs;
   fillKPIs();
   renderAll();
 
@@ -1903,6 +2299,9 @@ async function refresh(showFullLoader){
     EGRESOS_RAW = egresosResult ? egresosResult.raw : null;
     setLoading('Calculando métricas…');
     RAW = queryRaw();
+    DATA_ALL = buildData(RAW.lines, RAW.wallet);
+    EGRESOS_ALL = buildEgresosData(EGRESOS_RAW, null, null);
+    RESULTADO_ALL = buildResultado(DATA_ALL, EGRESOS_ALL);
     setupFilterBounds();
     applyFilterAndRender(); // respeta el filtro de fecha que el usuario ya haya elegido
     const now = new Date();
@@ -1944,6 +2343,12 @@ function boot(){
   });
   document.getElementById('pedidos-search').addEventListener('input', filterPedidosTable);
   document.getElementById('egresos-search').addEventListener('input', filterEgresosTable);
+  document.getElementById('clientes-search').addEventListener('input', function(){
+    makeTextFilterable('clientes-search', 'tabla-clientes', 'clientes-count', 'clientes');
+  });
+  document.getElementById('inactivos-search').addEventListener('input', function(){
+    makeTextFilterable('inactivos-search', 'tabla-inactivos', 'inactivos-count', 'clientes');
+  });
   activateTab('resumen');
   refresh(true);
   setInterval(function(){ refresh(false); }, REFRESH_MS);
