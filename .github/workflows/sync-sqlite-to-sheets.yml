@@ -1,0 +1,45 @@
+name: Sync Dropbox SQLite -> Google Sheets
+
+on:
+  schedule:
+    # Corre cada 4 horas. Ajustar el cron si querés otra frecuencia.
+    # Formato: minuto hora dia mes dia_semana (UTC)
+    - cron: "0 */4 * * *"
+  workflow_dispatch: {}   # permite disparar la sincronización a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+  id-token: write   # imprescindible: es lo que le permite a GitHub emitir el token OIDC
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout del repo
+        uses: actions/checkout@v4
+
+      - name: Autenticar contra Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: "projects/160427377996/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+          service_account: "nap-egresos@nap-dashboard-509313.iam.gserviceaccount.com"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install -r scripts/requirements.txt
+
+      - name: Ejecutar sincronización
+        env:
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+          DROPBOX_FILE_PATH: ${{ vars.DROPBOX_FILE_PATH }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: python scripts/sync_dropbox_sqlite_to_sheets.py
